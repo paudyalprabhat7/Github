@@ -4,10 +4,7 @@
 //	SPDX-License-Identifier: BSD-3-Clause
 
 // =============================================================================
-// This demo presents a cone penetrameter test with a soil sample made of clumped
-// particles of various sizes. Before the test starts, when compress the terrain
-// first, and note that the compressor used in this process has its position
-// explicitly controlled step-by-step.
+// Validation study 1
 // =============================================================================
 
 #include <DEM/API.h>
@@ -32,28 +29,64 @@ int main() {
     DEMSim.SetOutputContent(OUTPUT_CONTENT::ABSV);
     DEMSim.SetMeshOutputFormat(MESH_FORMAT::VTK);
     DEMSim.SetContactOutputContent(OWNER | FORCE | POINT);
+    DEMSim.SetErrorOutVelocity(20000.0);
 
+    //Material and material pair definition
     // E, nu, CoR, mu, Crr...
-    auto mat_type_cone = DEMSim.LoadMaterial({{"E", 1e9}, {"nu", 0.3}, {"CoR", 0.8}, {"mu", 0.7}, {"Crr", 0.00}});
-    auto mat_type_terrain = DEMSim.LoadMaterial({{"E", 1e9}, {"nu", 0.3}, {"CoR", 0.8}, {"mu", 0.4}, {"Crr", 0.00}});
+    auto mat_type_cube = DEMSim.LoadMaterial({{"E", 1e9}, {"nu", 0.3}, {"CoR", 0.8}, {"mu", 0.7}, {"Crr", 0.01}});
+    auto mat_type_terrain = DEMSim.LoadMaterial({{"E", 1e9}, {"nu", 0.3}, {"CoR", 0.8}, {"mu", 0.4}, {"Crr", 0.01}});
     // If you don't have this line, then values will take average between 2 materials, when they are in contact
-    DEMSim.SetMaterialPropertyPair("CoR", mat_type_cone, mat_type_terrain, 0.8);
-    DEMSim.SetMaterialPropertyPair("mu", mat_type_cone, mat_type_terrain, 0.7);
+    DEMSim.SetMaterialPropertyPair("CoR", mat_type_cube, mat_type_terrain, 0.8);
+    DEMSim.SetMaterialPropertyPair("mu", mat_type_cube, mat_type_terrain, 0.7);
 
-    float cone_speed = 0.03;
+    float cube_speed = 0.03;
     float step_size = 5e-6;
-    double world_size = 2;
-    double soil_bin_diameter = 0.584;
-    double cone_surf_area = 323e-6;
-    double cone_diameter = std::sqrt(cone_surf_area / math_PI) * 2;
+    double world_size = 10;
+
+    //adding world boundaries
     DEMSim.InstructBoxDomainDimension(world_size, world_size, world_size);
-    // No need to add simulation `world' boundaries, b/c we'll add a cylinderical container manually
     DEMSim.InstructBoxDomainBoundingBC("none", mat_type_terrain);
-    // Now add a cylinderical boundary along with a bottom plane
-    double bottom = -0.5;
+    
+    //geometric parameters:
+    float terrain_rad = 0.05; //radius of particles
+    
+    const float binWidth = 122 * terrain_rad; //bin width
+    const float binLength = 122 * terrain_rad; //bin length 
+    const float binHeight = 30 * terrain_rad; //bin height
+
     auto walls = DEMSim.AddExternalObject();
-    walls->AddCylinder(make_float3(0), make_float3(0, 0, 1), soil_bin_diameter / 2., mat_type_terrain, 0);
+
+    double bottom = 0;
+    
+    // Bottom plane
     walls->AddPlane(make_float3(0, 0, bottom), make_float3(0, 0, 1), mat_type_terrain);
+
+    // Adding walls
+    // Left wall
+    walls->AddPlane(make_float3(-binLength / 2, 0, bottom + binHeight / 2), make_float3(1, 0, 0), mat_type_terrain);
+    // Right wall
+    walls->AddPlane(make_float3(binLength / 2, 0, bottom + binHeight / 2), make_float3(-1, 0, 0), mat_type_terrain);
+    // Front wall
+    walls->AddPlane(make_float3(0, -binWidth / 2, bottom + binHeight / 2), make_float3(0, 1, 0), mat_type_terrain);
+    // Back wall
+    walls->AddPlane(make_float3(0, binWidth / 2, bottom + binHeight / 2), make_float3(0, -1, 0), mat_type_terrain);
+
+    // adding the loading plate
+    float dropobj_thickness = terrain_rad * 4.0;
+    float dropobj_width = binWidth * 0.95;
+    cube_speed = 0.03;
+
+    auto projectile = DEMSim.AddWavefrontMeshObject((GET_DATA_PATH() / "mesh/cube.obj").string(), mat_type_cube);
+    std::cout << "Total num of triangles: " << projectile->GetNumTriangles() << std::endl;
+
+    projectile->Scale(make_float3(dropobj_width, dropobj_width, dropobj_thickness));
+
+    //projectile->SetInitPos(make_float3(world_size / 2, world_size / 2, cube_pos));
+    float cube_mass = 7.8e3;
+    projectile->SetMass(cube_mass);
+    projectile->SetMOI(make_float3(cube_mass * 1 / 6, cube_mass * 1 / 6, cube_mass * 1 / 6));
+    projectile->SetFamily(2);
+    DEMSim.SetFamilyFixed(2);
 
     // Define the terrain particle templates
     // Calculate its mass and MOI
@@ -71,51 +104,18 @@ int main() {
 
     // Sampler to sample
     HCPSampler sampler(scale * 3.);
-    float fill_height = 0.5;
-    float3 fill_center = make_float3(0, 0, bottom + fill_height / 2);
-    const float fill_radius = soil_bin_diameter / 2. - scale * 3.;
+    float fill_height = binHeight;
+    float3 fill_center = make_float3(0, 0, fill_height / 2);
+    const float fill_radius = binWidth / 2. - scale * 3.;
     auto input_xyz = sampler.SampleCylinderZ(fill_center, fill_radius, fill_height / 2 - scale * 2.);
     DEMSim.AddClumps(my_template, input_xyz);
     std::cout << "Total num of particles: " << input_xyz.size() << std::endl;
 
-    // Load in the cone used for this penetration test
-    auto cone_tip = DEMSim.AddWavefrontMeshObject(GetDEMEDataFile("mesh/cone.obj"), mat_type_cone);
-    auto cone_body = DEMSim.AddWavefrontMeshObject(GetDEMEDataFile("mesh/cyl_r1_h2.obj"), mat_type_cone);
-    std::cout << "Total num of triangles: " << cone_tip->GetNumTriangles() + cone_body->GetNumTriangles() << std::endl;
+    auto proj_tracker = DEM.Sim.Track(projectile);
 
-    // The initial cone mesh has base radius 1, and height 1. Let's stretch it a bit so it has a 60deg tip, instead of
-    // 90deg.
-    float tip_height = std::sqrt(3.);
-    cone_tip->Scale(make_float3(1, 1, tip_height));
-    // Then set mass properties
-    float cone_mass = 7.8e3 * tip_height / 3 * math_PI;
-    cone_tip->SetMass(cone_mass);
-    // You can checkout https://en.wikipedia.org/wiki/List_of_moments_of_inertia
-    cone_tip->SetMOI(make_float3(cone_mass * (3. / 20. + 3. / 80. * tip_height * tip_height),
-                                 cone_mass * (3. / 20. + 3. / 80. * tip_height * tip_height), 3 * cone_mass / 10));
-    // This cone mesh has its tip at the origin. And, float4 quaternion pattern is (x, y, z, w).
-    cone_tip->InformCentroidPrincipal(make_float3(0, 0, 3. / 4. * tip_height), make_float4(0, 0, 0, 1));
-    // Note the scale method will scale mass and MOI automatically. But this only goes for the case you scale xyz all
-    // together; otherwise, the MOI scaling will not be accurate and you should manually reset them.
-    cone_tip->Scale(cone_diameter / 2);
-    cone_tip->SetFamily(2);
-
-    // The define the body that is connected to the tip
-    float body_mass = 7.8e3 * math_PI;
-    cone_body->SetMass(body_mass);
-    cone_body->SetMOI(make_float3(body_mass * 7 / 12, body_mass * 7 / 12, body_mass / 2));
-    // This cyl mesh (h = 2m, r = 1m) has its center at the origin. So the following call actually has no effect...
-    cone_body->InformCentroidPrincipal(make_float3(0, 0, 0), make_float4(0, 0, 0, 1));
-    cone_body->Scale(make_float3(cone_diameter / 2, cone_diameter / 2, 0.5));
-    cone_body->SetFamily(2);
-
-    // Track the cone_tip
-    auto tip_tracker = DEMSim.Track(cone_tip);
-    auto body_tracker = DEMSim.Track(cone_body);
-
-    // Because the cone's motion is completely pre-determined, we can just prescribe family 1
-    DEMSim.SetFamilyPrescribedLinVel(1, "0", "0", "-" + to_string_with_precision(cone_speed));
-    // Cone is initially in family 2, sleeping...
+    // Because the cube's motion is completely pre-determined, we can just prescribe family 1
+    DEMSim.SetFamilyPrescribedLinVel(1, "0", "0", "-" + to_string_with_precision(cube_speed));
+    // Initially cube is inactive and is assigned a family of 1
     DEMSim.SetFamilyFixed(2);
     DEMSim.DisableContactBetweenFamilies(0, 2);
 
@@ -144,7 +144,7 @@ int main() {
     DEMSim.Initialize();
 
     std::filesystem::path out_dir = std::filesystem::current_path();
-    out_dir += "/DemoOutput_ConePenetration";
+    out_dir += "/validation1_output";
     std::filesystem::create_directory(out_dir);
 
     // Settle
@@ -211,43 +211,40 @@ int main() {
     float frame_time = 1.0 / fps;
     std::cout << "Output at " << fps << " FPS" << std::endl;
 
-    // Put the cone in place
+    // Put the cube in place
     double starting_height = terrain_max_z + 0.03;
     // Its initial position should be right above the cone tip...
-    body_tracker->SetPos(make_float3(0, 0, 0.5 + (cone_diameter / 2 / 4 * tip_height) + starting_height));
-    // Note that position of objects is always the location of their centroid
-    tip_tracker->SetPos(make_float3(0, 0, starting_height));
-    // The tip location, used to measure penetration length
-    double tip_z = -cone_diameter / 2 * 3 / 4 * tip_height + starting_height;
+    proj_tracker->SetPos(make_float3(0, 0, starting_height));
 
-    // Enable cone
+    // Enable cube
     DEMSim.ChangeFamily(2, 1);
     float matter_mass = total_mass_finder->GetValue();
-    float total_volume = math_PI * (soil_bin_diameter * soil_bin_diameter / 4) * (terrain_max_z - bottom);
-    bulk_density = matter_mass / total_volume;
+    float total_volume = binWidth * binLength * (terrain_max_z - bottom);
     std::cout << "Bulk density: " << bulk_density << std::endl;
 
-    double tip_z_when_first_hit;
-    bool hit_terrain = false;
+    bool contact_made = false;
     unsigned int frame_count = 0;
+    double plate_z_when_first_contact;
 
     std::chrono::high_resolution_clock::time_point start = std::chrono::high_resolution_clock::now();
     for (float t = 0; t < sim_end; t += frame_time) {
-        // float terrain_max_z = max_z_finder->GetValue();
-        float3 forces = tip_tracker->ContactAcc();
-        // Note cone_mass is not the true mass, b/c we scaled the the cone tip! So we use true mass by using
-        // cone_tip->mass.
-        forces *= cone_tip->mass;
-        float pressure = std::abs(forces.z) / cone_surf_area;
-        if (pressure > 1e-4 && !hit_terrain) {
-            hit_terrain = true;
-            tip_z_when_first_hit = tip_z;
+        //tracking the pressing plate if necessary
+        float3 forces = proj_tracker->ContactAcc(); 
+        float pressure = std::abs(forces.z) / (dropobj_width * dropobj_width); 
+
+        // Condition to check for initial contact, if not already done
+        if (!contact_made && pressure > 1e-4) { // Threshold might need adjustment
+            contact_made = true;
+            plate_z_when_first_contact = proj_tracker->GetPos().z; // Assuming proj_tracker provides position
         }
-        float penetration = (hit_terrain) ? tip_z_when_first_hit - tip_z : 0;
+
+        // Calculate penetration (or compression depth) differently for pressing action
+        float penetration = contact_made ? (plate_z_when_first_contact - proj_tracker->GetPos().z) : 0.0f;
+
         std::cout << "Time: " << t << std::endl;
-        std::cout << "Z coord of tip: " << tip_z << std::endl;
-        std::cout << "Penetration: " << penetration << std::endl;
-        std::cout << "Force on cone: " << forces.x << ", " << forces.y << ", " << forces.z << std::endl;
+        std::cout << "Plate Z coord: " << proj_tracker->GetPos().z << std::endl;
+        std::cout << "Compression: " << penetration << std::endl;
+        std::cout << "Force on plate: " << forces.x << ", " << forces.y << ", " << forces.z << std::endl;
         std::cout << "Pressure: " << pressure << std::endl;
 
         if (frame_count % 500 == 0) {
@@ -261,14 +258,14 @@ int main() {
         }
 
         DEMSim.DoDynamicsThenSync(frame_time);
-        tip_z -= cone_speed * frame_time;
 
+        // Update for pressing plate's movement if it's being controlled dynamically
         frame_count++;
     }
     std::chrono::high_resolution_clock::time_point end = std::chrono::high_resolution_clock::now();
     std::chrono::duration<double> time_sec = std::chrono::duration_cast<std::chrono::duration<double>>(end - start);
     std::cout << time_sec.count() << " seconds (wall time) to finish the simulation" << std::endl;
 
-    std::cout << "ConePenetration demo exiting..." << std::endl;
+    std::cout << "Simulation exiting..." << std::endl;
     return 0;
 }
