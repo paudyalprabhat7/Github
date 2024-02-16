@@ -4,8 +4,7 @@
 //	SPDX-License-Identifier: BSD-3-Clause
 
 // =============================================================================
-// This demo tries to show the strain distribution in the granular material when
-// affected by a compressor.
+// A meshed CUBE hitting a granular bed under gravity.
 // =============================================================================
 
 #include <core/ApiVersion.h>
@@ -21,126 +20,149 @@
 using namespace deme;
 using namespace std::filesystem;
 
-
 int main() {
     DEMSolver DEMSim;
     DEMSim.SetVerbosity(INFO);
     DEMSim.SetOutputFormat(OUTPUT_FORMAT::CSV);
-    DEMSim.SetMeshOutputFormat(MESH_FORMAT::VTK);
     DEMSim.SetOutputContent(OUTPUT_CONTENT::ABSV);
-
-    path out_dir = current_path();
-    out_dir += "/DemoOutput_Indentation_boxdrop";
-    create_directory(out_dir);
+    DEMSim.SetMeshOutputFormat(MESH_FORMAT::VTK);
+    DEMSim.SetErrorOutVelocity(20000.);
+    DEMSim.EnsureKernelErrMsgLineNum();
 
     // E, nu, CoR, mu, Crr...
-    auto mat_type_cube = DEMSim.LoadMaterial({{"E", 1e8}, {"nu", 0.3}, {"CoR", 0.1}, {"mu", 0.4}, {"Crr", 0.0}});
-    auto mat_type_granular_1 = DEMSim.LoadMaterial({{"E", 1e8}, {"nu", 0.3}, {"CoR", 0.1}, {"mu", 0.45}, {"Crr", 0.5}});
-    auto mat_type_granular_2 = DEMSim.LoadMaterial({{"E", 1e8}, {"nu", 0.3}, {"CoR", 0.1}, {"mu", 0.45}, {"Crr", 0.5}});
-    // CoR is a pair-wise property, so it should be mentioned here
-    DEMSim.SetMaterialPropertyPair("CoR", mat_type_cube, mat_type_granular_1, 0.8);
-    DEMSim.SetMaterialPropertyPair("CoR", mat_type_cube, mat_type_granular_2, 0.8);
-
-    float granular_rad = 0.005;  // 0.002;
-    auto template_granular = DEMSim.LoadSphereType(granular_rad * granular_rad * granular_rad * 2.6e3 * 4 / 3 * 3.14,
-                                                   granular_rad, mat_type_granular_1);
+    auto mat_type_ball = DEMSim.LoadMaterial({{"E", 1e10}, {"nu", 0.3}, {"CoR", 0.6}, {"mu", 0.3}, {"Crr", 0.01}});
+    auto mat_type_terrain = DEMSim.LoadMaterial({{"E", 5e9}, {"nu", 0.3}, {"CoR", 0.8}, {"mu", 0.3}, {"Crr", 0.01}});
+    // If you don't have this line, then CoR between mixer material and granular material will be 0.7 (average of the
+    // two).
+    DEMSim.SetMaterialPropertyPair("CoR", mat_type_ball, mat_type_terrain, 0.6);
+    // Should do the same for mu and Crr, but since they are the same across 2 materials, it won't have an effect...
 
     float step_size = 1e-5;
-    const double world_size = 0.15;
-    const float fill_height = 0.075;
-    const float chamber_bottom = -world_size / 2.;
-    const float fill_bottom = chamber_bottom + granular_rad;
 
-    DEMSim.InstructBoxDomainDimension(world_size, world_size, world_size);
-    DEMSim.InstructBoxDomainBoundingBC("all", mat_type_granular_2);
+    double world_size = 10;
+    double cube_pos = 4;
+    DEMSim.InstructBoxDomainDimension({0, world_size}, {0, world_size}, {0, world_size});
+    DEMSim.InstructBoxDomainBoundingBC("top_open", mat_type_terrain);
 
-    // define the upper cube
-    auto cube_upper = DEMSim.AddWavefrontMeshObject(GetDEMEDataFile("mesh/cube.obj"), mat_type_cube);
-    std::cout << "Total num of triangles in upper cube: " << cube_upper->GetNumTriangles() << std::endl;
-    // Make the cube about 2cm by 1cm
-    float cube_width = 0.02;
-    float cube_height = 0.01;
-    //double cube_speed = 0.25;  // 0.1 and 0.02, try them too... very similar though
-    cube_upper->Scale(make_float3(cube_width, cube_width, cube_height));
-    cube_upper->SetFamily(3);
-    DEMSim.SetFamilyFixed(3);
+    float dropobj_height = 0.025;
+    float dropobj_width = 6.5;
 
-    //DEMSim.SetFamilyPrescribedLinVel(11, "0", "0", to_string_with_precision(-cube_speed));
-    // Track the cube
-    auto cube_upper_tracker = DEMSim.Track(cube_upper);
+    auto projectile = DEMSim.AddWavefrontMeshObject((GET_DATA_PATH() / "mesh/cube.obj").string(), mat_type_ball);
+    std::cout << "Total num of triangles: " << projectile->GetNumTriangles() << std::endl;
 
-    //define the lower cube
-    auto cube_lower = DEMSim.AddWavefrontMeshObject(GetDEMEDataFile("mesh/cube.obj"), mat_type_cube);
-    std::cout << "Total num of triangles in lower cube: " << cube_lower->GetNumTriangles() << std::endl;
-    float cube_width_l = 0.02;
-    float cube_height_l = 0.01;
-    //double cube_speed = 0.25;  // 0.1 and 0.02, try them too... very similar though
-    cube_lower->Scale(make_float3(cube_width, cube_width, cube_height));
-    cube_lower->SetFamily(4);
-    DEMSim.SetFamilyFixed(4);
+    projectile->Scale(make_float3(dropobj_width, dropobj_width, dropobj_height));
 
-    //track the lower cube
-    auto cube_lower_tracker = DEMSim.Track(cube_lower); 
+    projectile->SetInitPos(make_float3(world_size / 2, world_size / 2, cube_pos));
+    float ball_mass = 7.8e3;
+    projectile->SetMass(ball_mass);
+    projectile->SetMOI(make_float3(ball_mass * 1 / 6, ball_mass * 1 / 6, ball_mass * 1 / 6));
+    projectile->SetFamily(2);
+    DEMSim.SetFamilyFixed(2);
 
-    HCPSampler sampler(3.f * granular_rad);
-    float3 fill_center = make_float3(0, 0, fill_bottom + fill_height / 2);
-    const float fill_radius = world_size / 2 - 2. * granular_rad;
-    auto input_xyz = sampler.SampleCylinderZ(fill_center, fill_radius, fill_height);
+    float terrain_rad = 0.05;
+    auto template_terrain = DEMSim.LoadSphereType(terrain_rad * terrain_rad * terrain_rad * 2.6e3 * 4 / 3 * 3.14,
+                                                  terrain_rad, mat_type_terrain);
 
-    auto particles = DEMSim.AddClumps(template_granular, input_xyz);
+    // Track the projectile
+    auto proj_tracker = DEMSim.Track(projectile);
+
+    float sample_halfheight = world_size / 8;
+    float3 sample_center = make_float3(world_size / 2, world_size / 2, sample_halfheight + 0.05);
+    float sample_halfwidth = world_size / 2 * 0.95;
+    auto input_xyz = DEMBoxHCPSampler(sample_center, make_float3(sample_halfwidth, sample_halfwidth, sample_halfheight),
+                                      2.01 * terrain_rad);
+    DEMSim.AddClumps(template_terrain, input_xyz);
     std::cout << "Total num of particles: " << input_xyz.size() << std::endl;
 
-    // After creating particles
-    // Declare and initialize the particle tracker and related variables
-    auto particle_tracker = DEMSim.Track(particles);
-    unsigned int num_particles = input_xyz.size();
-    particles->SetFamily(1);
+    // Initialize the compressor just above the granular bed
+    float initial_compression_height = sample_center.z + sample_halfheight + 0.05; // Adjust 0.05 if needed
+    auto compressor = DEMSim.AddExternalObject();
+    compressor->AddPlane(make_float3(0, 0, initial_compression_height), make_float3(0, 0, -1), mat_type_terrain);
+    compressor->SetFamily(10);
+    DEMSim.SetFamilyFixed(10);
+    auto compressor_tracker = DEMSim.Track(compressor);
 
-    // Position the upper cube
-    float upper_cube_z_position = fill_bottom + fill_height + 0.01 + cube_height / 2.0;
-    cube_upper_tracker->SetPos(make_float3(0, 0, upper_cube_z_position));
 
-    // Position the lower cube
-    float depth_80_percent = fill_bottom + 0.8 * fill_height - cube_height_l / 2.0;
-    cube_lower_tracker->SetPos(make_float3(0, 0, depth_80_percent));
-
-    DEMSim.DisableContactBetweenFamilies(1,3);
-
-    //gravity and others
     DEMSim.SetInitTimeStep(step_size);
     DEMSim.SetGravitationalAcceleration(make_float3(0, 0, -9.81));
-    DEMSim.SetCDUpdateFreq(20);
-    // You usually don't have to worry about initial bin size. But sometimes if you can set the init bin size so that
-    // the kT--dT work at a sweet collaboration pattern, it could make the solver run faster.
-    DEMSim.SetInitBinNumTarget(5e7);
+    // Max velocity info is generally just for the solver's reference and the user do not have to set it. The solver
+    // wouldn't take into account a vel larger than this when doing async-ed contact detection: but this vel won't
+    // happen anyway and if it does, something already went wrong.
+    DEMSim.SetMaxVelocity(15.);
+    // In general you don't have to worry about SetExpandSafetyAdder, unless if an entity has the property that a point
+    // on it can move much faster than its CoM. In this demo, you are dealing with a meshed ball and you in fact don't
+    // have this problem. In the Centrifuge demo though, this can be a problem since the centrifuge's CoM is not moving,
+    // but its pointwise velocity can be high, so it needs to be accounted for using this method.
+    DEMSim.SetExpandSafetyAdder(5.);
+    // You usually don't have to worry about initial bin size. In very rare cases, init bin size is so bad that auto bin
+    // size adaption is effectless, and you should notice in that case kT runs extremely slow. Then in that case setting
+    // init bin size may save the simulation.
+    // DEMSim.SetInitBinSize(4 * terrain_rad);
+
     DEMSim.Initialize();
 
+    path out_dir = current_path();
+    out_dir += "/DemoOutput_CUBEDrop";
+    create_directory(out_dir);
 
-    //letting the first cube drop
-    DEMSim.ChangeFamily(3,5);
-    
-    const double total_simulation_time = 5.0; // Total time for the simulation
-    const unsigned int fps = 200;             // Frames per second for output
-    const float frame_time = 1.0 / fps;       // Time interval for outputs
-    unsigned int out_steps = static_cast<unsigned int>(1.0 / (fps * step_size));
+    float sim_time = 6.0;
+    float settle_time = 2.0;
+    float compressor_vel = 0.01;
+    unsigned int fps = 20;
+    float frame_time = 1.0 / fps;
+    float compression_height_decrement = compressor_vel * step_size;
+    float current_compressor_height = initial_compression_height;
 
-    std::cout << "Starting the simulation..." << std::endl;
 
-    // Simplified Simulation loop
-    for (double t = 0; t < total_simulation_time; t += step_size) {
-        DEMSim.DoDynamics(step_size);
+    std::cout << "Output at " << fps << " FPS" << std::endl;
+    unsigned int currframe = 0;
 
-        // Output data at specified intervals
-        if (static_cast<unsigned int>(t / step_size) % out_steps == 0) {
-            char filename[200], meshname[200];
-            std::cout << "Outputting frame: " << static_cast<unsigned int>(t / frame_time) << std::endl;
-            sprintf(filename, "%s/DEMdemo_output_%04d.csv", out_dir.c_str(), static_cast<unsigned int>(t / frame_time));
-            sprintf(meshname, "%s/DEMdemo_mesh_%04d.vtk", out_dir.c_str(), static_cast<unsigned int>(t / frame_time));
-            DEMSim.WriteSphereFile(std::string(filename));
-            DEMSim.WriteMeshFile(std::string(meshname));
-        }
+    for (float t = 0; t < settle_time; t += frame_time) {
+    if (t < 2.0) { // Assuming you want to compress within the first 2 seconds
+        // Move the compressor down to compress the granular bed
+        current_compressor_height -= compression_height_decrement;
+        compressor_tracker->SetPos(make_float3(0, 0, current_compressor_height));
     }
 
-    std::cout << "Simulation completed." << std::endl;
+    // Output and sync
+    std::cout << "Frame: " << currframe << std::endl;
+    char filename[200], meshfilename[200];
+    sprintf(filename, "%s/DEMdemo_output_%04d.csv", out_dir.c_str(), currframe);
+    sprintf(meshfilename, "%s/DEMdemo_mesh_%04d.vtk", out_dir.c_str(), currframe);
+    DEMSim.WriteSphereFile(std::string(filename));
+    DEMSim.WriteMeshFile(std::string(meshfilename));
+    currframe++;
+
+    DEMSim.DoDynamicsThenSync(frame_time);
+    DEMSim.ShowThreadCollaborationStats();
+    }
+
+    // Then drop the ball. I also wanted to test if changing step size method works fine here...
+    //step_size *= 0.5;
+    //DEMSim.UpdateStepSize(step_size);
+    DEMSim.ChangeFamily(2, 1);
+
+    std::chrono::high_resolution_clock::time_point start = std::chrono::high_resolution_clock::now();
+    for (float t = 0; t < sim_time; t += frame_time) {
+        std::cout << "Frame: " << currframe << std::endl;
+        char filename[200], meshfilename[200], cnt_filename[200];
+        sprintf(filename, "%s/DEMdemo_output_%04d.csv", out_dir.c_str(), currframe);
+        sprintf(meshfilename, "%s/DEMdemo_mesh_%04d.vtk", out_dir.c_str(), currframe);
+        // sprintf(cnt_filename, "%s/Contact_pairs_%04d.csv", out_dir.c_str(), currframe);
+        DEMSim.WriteSphereFile(std::string(filename));
+        DEMSim.WriteMeshFile(std::string(meshfilename));
+        // DEMSim.WriteContactFile(std::string(cnt_filename));
+        currframe++;
+
+        DEMSim.DoDynamicsThenSync(frame_time);
+        DEMSim.ShowThreadCollaborationStats();
+    }
+    std::chrono::high_resolution_clock::time_point end = std::chrono::high_resolution_clock::now();
+    std::chrono::duration<double> time_sec = std::chrono::duration_cast<std::chrono::duration<double>>(end - start);
+    std::cout << time_sec.count() << " seconds (wall time) to finish the simulation" << std::endl;
+
+    DEMSim.ShowTimingStats();
+    DEMSim.ShowAnomalies();
+    std::cout << "DEMdemo_BallDrop exiting..." << std::endl;
     return 0;
 }
