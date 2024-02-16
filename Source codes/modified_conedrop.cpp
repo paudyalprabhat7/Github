@@ -81,7 +81,6 @@ int main() {
 
     projectile->Scale(make_float3(dropobj_width, dropobj_width, dropobj_thickness));
 
-    //projectile->SetInitPos(make_float3(world_size / 2, world_size / 2, cube_pos));
     float cube_mass = 7.8e3;
     projectile->SetMass(cube_mass);
     projectile->SetMOI(make_float3(cube_mass * 1 / 6, cube_mass * 1 / 6, cube_mass * 1 / 6));
@@ -111,7 +110,7 @@ int main() {
     DEMSim.AddClumps(my_template, input_xyz);
     std::cout << "Total num of particles: " << input_xyz.size() << std::endl;
 
-    auto proj_tracker = DEM.Sim.Track(projectile);
+    auto proj_tracker = DEMSim.Track(projectile);
 
     // Because the cube's motion is completely pre-determined, we can just prescribe family 1
     DEMSim.SetFamilyPrescribedLinVel(1, "0", "0", "-" + to_string_with_precision(cube_speed));
@@ -159,10 +158,13 @@ int main() {
     float terrain_max_z = max_z_finder->GetValue();
     double init_max_z = terrain_max_z;
     float bulk_density = -10000.;
+
     while (bulk_density < 1500.) {
         float matter_mass = total_mass_finder->GetValue();
-        float total_volume = math_PI * (soil_bin_diameter * soil_bin_diameter / 4) * (terrain_max_z - bottom);
+        // Adjusted volume calculation for rectangular domain
+        float total_volume = binWidth * binLength * (terrain_max_z - bottom);
         bulk_density = matter_mass / total_volume;
+
         if (curr_step % out_steps == 0) {
             char filename[200], meshname[200];
             sprintf(filename, "%s/DEMdemo_output_%04d.csv", out_dir.c_str(), currframe);
@@ -187,8 +189,7 @@ int main() {
             DEMSim.WriteSphereFile(std::string(filename));
             // DEMSim.WriteMeshFile(std::string(meshname));
             float matter_mass = total_mass_finder->GetValue();
-            float total_volume =
-                math_PI * (soil_bin_diameter * soil_bin_diameter / 4) * (max_z_finder->GetValue() - bottom);
+            float total_volume = binWidth * binLength * (terrain_max_z - bottom);
             bulk_density = matter_mass / total_volume;
             std::cout << "Compression bulk density: " << bulk_density << std::endl;
             currframe++;
@@ -212,7 +213,7 @@ int main() {
     std::cout << "Output at " << fps << " FPS" << std::endl;
 
     // Put the cube in place
-    double starting_height = terrain_max_z + 0.03;
+    double starting_height = terrain_max_z + terrain_rad*4;
     // Its initial position should be right above the cone tip...
     proj_tracker->SetPos(make_float3(0, 0, starting_height));
 
