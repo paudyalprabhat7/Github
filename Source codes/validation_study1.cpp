@@ -97,7 +97,7 @@ int main() {
     const int totalsteps = 5000;
     int outputFrequency = 100;
 
-    for(int step = 0; step < totalSteps; ++step) {
+    for(int step = 0; step < totalsteps; ++step) {
         DEMSim.DoDynamicsThenSync(2e-5);
         if (step % outputFrequency == 0) {
         std::cout << "Simulation Step: " << step << std::endl;
@@ -112,4 +112,5 @@ int main() {
     DEMSim.ShowTimingStats();
     std::cout << "Simulation complete. Particles have settled" <<std::endl;
     return 0;
+    }
 }
