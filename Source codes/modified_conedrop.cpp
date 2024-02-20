@@ -58,6 +58,7 @@ int main() {
 
     double bottom = 0;
     
+    /*
     // Bottom plane
     walls->AddPlane(make_float3(0, 0, bottom), make_float3(0, 0, 1), mat_type_terrain);
 
@@ -70,6 +71,7 @@ int main() {
     walls->AddPlane(make_float3(0, -binWidth / 2, bottom + binHeight / 2), make_float3(0, 1, 0), mat_type_terrain);
     // Back wall
     walls->AddPlane(make_float3(0, binWidth / 2, bottom + binHeight / 2), make_float3(0, -1, 0), mat_type_terrain);
+    */
 
     // adding the loading plate
     float dropobj_thickness = terrain_rad * 4.0;
@@ -87,27 +89,20 @@ int main() {
     projectile->SetFamily(2);
     DEMSim.SetFamilyFixed(2);
 
-    // Define the terrain particle templates
-    // Calculate its mass and MOI
-    float terrain_density = 2.6e3;
-    double clump_vol = 5.5886717;
-    float mass = terrain_density * clump_vol;
-    float3 MOI = make_float3(2.928, 2.6029, 3.9908) * terrain_density;
-    // Then load it to system
-    std::shared_ptr<DEMClumpTemplate> my_template =
-        DEMSim.LoadClumpType(mass, MOI, GetDEMEDataFile("clumps/3_clump.csv"), mat_type_terrain);
-    my_template->SetVolume(clump_vol);
-    // Decide the scalings of the templates we just created (so that they are... like particles, not rocks)
-    double scale = 0.0044;
-    my_template->Scale(scale);
+    // Define the dimensions of the area to be filled
+    auto template_terrain = DEMSim.LoadSphereType(terrain_rad * terrain_rad * terrain_rad * 2.6e3 * 4 / 3 * 3.14,
+                                                  terrain_rad, mat_type_terrain);
 
-    // Sampler to sample
-    HCPSampler sampler(scale * 3.);
-    float fill_height = binHeight;
-    float3 fill_center = make_float3(0, 0, fill_height / 2);
-    const float fill_radius = binWidth / 2. - scale * 3.;
-    auto input_xyz = sampler.SampleCylinderZ(fill_center, fill_radius, fill_height / 2 - scale * 2.);
-    DEMSim.AddClumps(my_template, input_xyz);
+    float sample_halfwidth = binWidth / 2;
+    float sample_halflength = binLength / 2;
+    float sample_halfheight = binHeight / 2;
+
+    // Center position for the terrain fill (assuming the bottom of the bin is at z=0)
+    float3 sample_center = make_float3(0, 0, sample_halfheight);
+
+    // Generate positions using cubic packing
+    auto input_xyz = DEMBoxHCPSampler(sample_center, make_float3(sample_halfwidth, sample_halflength, sample_halfheight), 2.01 * terrain_rad);
+    DEMSim.AddClumps(template_terrain, input_xyz);
     std::cout << "Total num of particles: " << input_xyz.size() << std::endl;
 
     auto proj_tracker = DEMSim.Track(projectile);
@@ -213,7 +208,7 @@ int main() {
     std::cout << "Output at " << fps << " FPS" << std::endl;
 
     // Put the cube in place
-    double starting_height = terrain_max_z + terrain_rad*4;
+    double starting_height = terrain_max_z + terrain_rad*10;
     // Its initial position should be right above the cone tip...
     proj_tracker->SetPos(make_float3(0, 0, starting_height));
 
@@ -236,14 +231,14 @@ int main() {
         // Condition to check for initial contact, if not already done
         if (!contact_made && pressure > 1e-4) { // Threshold might need adjustment
             contact_made = true;
-            plate_z_when_first_contact = proj_tracker->GetPos().z; // Assuming proj_tracker provides position
+            plate_z_when_first_contact = proj_tracker->GetPos()[2]; // Assuming proj_tracker provides position
         }
 
         // Calculate penetration (or compression depth) differently for pressing action
-        float penetration = contact_made ? (plate_z_when_first_contact - proj_tracker->GetPos().z) : 0.0f;
+        float penetration = contact_made ? (plate_z_when_first_contact - proj_tracker->GetPos()[2]) : 0.0f;
 
         std::cout << "Time: " << t << std::endl;
-        std::cout << "Plate Z coord: " << proj_tracker->GetPos().z << std::endl;
+        std::cout << "Plate Z coord: " << proj_tracker->GetPos()[2] << std::endl;
         std::cout << "Compression: " << penetration << std::endl;
         std::cout << "Force on plate: " << forces.x << ", " << forces.y << ", " << forces.z << std::endl;
         std::cout << "Pressure: " << pressure << std::endl;
