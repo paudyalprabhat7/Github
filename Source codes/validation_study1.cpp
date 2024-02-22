@@ -50,30 +50,36 @@ int main() {
     //definition of the sphere type
     auto sph_type_1 = DEMSim.LoadSphereType(11728., 1., mat_type_1);
 
-    const float R = 0.05;
-    const float x_spacing = 2 * R;
-    const float y_spacing = sqrt(3) * R;
-    const int layers_z = 30;
+    // Adjusted parameters for custom lattice stacking
+    const float R = 0.05; // Particle radius
+    const float particleDiameter = 2 * R;
+    const int baseLayerCountX = 16; // Starting with 16 particles in the bottom layer
+    const int totalLayers = 15; // Total number of layers to stack
 
-    //prepare vectors for positions and a shared clump type
     std::vector<float3> positions;
     std::vector<std::shared_ptr<DEMClumpTemplate>> clump_types;
 
-    //lattice generation
-    for (int z = 0; z < layers_z; ++z) {
-    int rows_xy = (z % 2 == 0) ? 61 : 60; // Alternating rows in the xy plane
-    for (int y = 0; y < rows_xy; ++y) {
-        for (int x = 0; x < rows_xy; ++x) {
-            // Calculate position with an offset for every other row
-            float xPos = x * x_spacing + ((y % 2) * R);
-            float yPos = y * y_spacing;
-            float zPos = z * 2 * R;
-            positions.push_back(make_float3(xPos, yPos, zPos));
-            clump_types.push_back(sph_type_1); // Assuming sph_type_1 is defined earlier as a sphere type
+    // Generate the custom lattice
+    for (int layer = 0; layer < totalLayers; ++layer) {
+        int layerCountX = baseLayerCountX - layer; // Decrease the number of particles for each layer
+        int layerCountY = static_cast<int>(std::round(0.1 * layerCountX)); // Adjust based on your requirements
+
+        for (int y = 0; y < layerCountY; ++y) {
+            for (int x = 0; x < layerCountX; ++x) {
+                float xPos = x * particleDiameter;
+                float yPos = y * sqrt(3) * R; // Keeping the close packing in y
+                float zPos = layer * particleDiameter; // Stack the layers directly on top of each other
+
+                positions.push_back(make_float3(xPos, yPos, zPos));
+                clump_types.push_back(sph_type_1); // Assume sph_type_1 is defined as before
+            }
         }
-    }}
+    }
 
     auto particles = DEMSim.AddClumps(clump_types, positions);
+    auto particles = DEMSim.AddClumps(clump_types, positions);
+    
+
 
     // Add bottom plane mesh
     auto bot_plane = DEMSim.AddWavefrontMeshObject((GET_DATA_PATH() / "mesh/plane_20by20.obj").string(), mat_type_2);
@@ -91,26 +97,29 @@ int main() {
     DEMSim.Initialize();
     
     path out_dir = current_path();
-    out_dir += "/lattice_validation";
+    out_dir += "/DEM_particlelattice"
     create_directory(out_dir);
 
-    const int totalsteps = 5000;
-    int outputFrequency = 100;
+    float settle_time = 2.0;
+    unsigned int fps = 20;
+    float frame_time = 1.0 / fps;
 
-    for(int step = 0; step < totalsteps; ++step) {
-        DEMSim.DoDynamicsThenSync(2e-5);
-        if (step % outputFrequency == 0) {
-        std::cout << "Simulation Step: " << step << std::endl;
+    std::cout << "Output at " << fps << " FPS" << std::endl;
+    unsigned int currframe = 0;
 
-        // Output the current state of the simulation
-        char filename[200];
-        sprintf(filename, "%s/DEMdemo_output_%04d.csv", out_dir.c_str(), step / outputFrequency);
+    //let's settle the lattice
+    for(float t=0; t < settle_time; t += frame_time) {
+        std::cout << "Frame: " << currframe << std::endl;
+        char filename[200], meshfilename[200];
+        sprintf(filename, "%s/DEM_particlelattice_out_%04d.csv", out_dir.c_str(), currframe);
+        sprintf(meshfilename, "%s/DEM_particlelattice_%04d.vtk", out_dir.c_str(), currframe);
         DEMSim.WriteSphereFile(std::string(filename));
+        DEMSim.WriteMeshFile(std::string(meshfilename));
+        currframe++;
+
+        DEMSim.DoDynamicsThenSync(frame_time);
+        DEMSim.ShowThreadCollaborationStats();
     }
     
-    DEMSim.ShowThreadCollaborationStats();
-    DEMSim.ShowTimingStats();
-    std::cout << "Simulation complete. Particles have settled" <<std::endl;
-    return 0;
-    }
+
 }
