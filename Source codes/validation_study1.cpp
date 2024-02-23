@@ -77,10 +77,7 @@ int main() {
     }
 
     auto particles = DEMSim.AddClumps(clump_types, positions);
-    auto particles = DEMSim.AddClumps(clump_types, positions);
     
-
-
     // Add bottom plane mesh
     auto bot_plane = DEMSim.AddWavefrontMeshObject((GET_DATA_PATH() / "mesh/plane_20by20.obj").string(), mat_type_2);
     bot_plane->SetInitPos(make_float3(0, 0, -1.25));
@@ -97,7 +94,7 @@ int main() {
     DEMSim.Initialize();
     
     path out_dir = current_path();
-    out_dir += "/DEM_particlelattice"
+    out_dir += "/DEM_particlelattice";
     create_directory(out_dir);
 
     float settle_time = 2.0;
@@ -121,5 +118,4 @@ int main() {
         DEMSim.ShowThreadCollaborationStats();
     }
     
-
 }
