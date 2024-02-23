@@ -72,7 +72,7 @@ int main() {
     int n = 30; //base number of particles in x and y directions
     int y  = 15; //number of layers
     
-    auto positions = GenerateCustomLattice(n, y, particleDiameter)
+    auto positions = GenerateCustomLattice(n, y, particleDiameter);
 
     //assigning particles to positions
     for(const auto&pos : positions) {
