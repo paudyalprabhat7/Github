@@ -70,13 +70,13 @@ int main() {
     
     //domaining the particle generation
     int n = 30; //base number of particles in x and y directions
-    int y  = 15; //number of layers
+    int y  = 2; //number of layers
     
     auto positions = GenerateCustomLattice(n, y, particleDiameter);
 
     //assigning particles to positions
     for(const auto&pos : positions) {
-        DEMSim.AddClumps(template_terrain, pos)
+        DEMSim.AddClumps(template_terrain, pos);
     }
 
     DEMSim.SetInitTimeStep(step_size);
@@ -98,7 +98,7 @@ int main() {
     DEMSim.Initialize();
 
     path out_dir = current_path();
-    out_dir += "/DemoOutput_CUBEDrop";
+    out_dir += "/DemoLayers";
     create_directory(out_dir);
 
     float settle_time = 2.0;
