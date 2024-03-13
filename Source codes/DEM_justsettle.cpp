@@ -29,7 +29,7 @@ int main() {
     double terrain_rad = 0.006 / 2.;
 
     float step_size = 2e-6;
-    double world_size = 0.2;
+    double world_size = terrain_rad * 122.5;
     DEMSim.InstructBoxDomainDimension({-world_size / 2., world_size / 2.}, {-world_size / 2., world_size / 2.},
                                       {0, 10 * world_size});
     DEMSim.InstructBoxDomainBoundingBC("top_open", mat_type_terrain);
