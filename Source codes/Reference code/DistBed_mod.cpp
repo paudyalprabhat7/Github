@@ -83,9 +83,12 @@ int main() {
     float step_size = 1e-6;
     //float Sim_CED = 0; //Pa
 
-    double xBoundary = 0.32;
-    double yBoundary = 0.32;
-    double zBoundary = 0.5;
+    //lateral and vertical extents
+    float terrain_rad = 0.005;
+
+    double xBoundary = 122.0 * terrain_rad;
+    double yBoundary = 12.0 * terrain_rad;
+    double zBoundary = 30.0 * terrain_rad;
     double safety_margin= 0.05;
 
     DEMSim.InstructBoxDomainDimension(xBoundary, yBoundary, zBoundary + safety_margin);
@@ -98,7 +101,7 @@ int main() {
     auto bot_wall_tracker = DEMSim.Track(bot_wall);
 
     //load terrain
-    float terrain_rad = 0.05;
+    
     auto template_terrain = DEMSim.LoadSphereType(terrain_rad * terrain_rad * terrain_rad * 2.6e3 * 4 / 3 * 3.14,
                                                   terrain_rad, mat_type_terrain);
 
