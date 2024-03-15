@@ -52,23 +52,22 @@ int main() {
 
     // Generate the custom lattice
     for (int layer = 0; layer < totalLayers; ++layer) {
-    // Alternate between baseLayerCountX and baseLayerCountX - 1 based on whether the layer index is even or odd
-    int layerCountX = baseLayerCountX - (layer % 2); 
-    // Calculation for layerCountY remains the same
-    int layerCountY = static_cast<int>(std::round(0.1 * layerCountX)); 
-    for (int y = 0; y < layerCountY; ++y) {
-        for (int x = 0; x < layerCountX; ++x) {
-            // Calculation for xPos, yPos, and zPos remains the same
-            float xPos = x * particleDiameter;
-            float yPos = y * sqrt(3) * R; 
-            float zPos = layer * particleDiameter; 
+        int layerCountX = baseLayerCountX - layer; // Decrease the number of particles for every other layer for a triangular lattice structure
+        int layerCountY = static_cast<int>(std::round(0.1 * layerCountX)); // number of particles in the y-direction would essentially be 10% of that in the y-direction, rounded to the nearest integer
+        for (int y = 0; y < layerCountY; ++y) {
+            for (int x = 0; x < layerCountX; ++x) {
+                
+                //positions of particles in each layer in z-direction
+                
+                float xPos = x * particleDiameter;
+                float yPos = y * sqrt(3) * R; // Keeping the close packing in y
+                float zPos = layer * particleDiameter; // Stack the layers directly on top of each other
 
-            positions.push_back(make_float3(xPos, yPos, zPos));
-            clump_types.push_back(sph_type_1);
+                positions.push_back(make_float3(xPos, yPos, zPos));
+                clump_types.push_back(sph_type_1); // Assume sph_type_1 is defined as before
             }
         }
     }
-
 
     auto particles = DEMSim.AddClumps(clump_types, positions);
     
