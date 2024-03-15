@@ -4,7 +4,7 @@
 //	SPDX-License-Identifier: BSD-3-Clause
 
 // =============================================================================
-// A demo that is basically the hello-world script for DEME.
+// Lattice generation custom
 // =============================================================================
 
 #include <core/ApiVersion.h>
