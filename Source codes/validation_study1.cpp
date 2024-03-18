@@ -44,39 +44,46 @@ int main() {
     // Adjusted parameters for custom lattice stacking
     const float R = 0.05; // Particle radius
     const float particleDiameter = 2 * R;
-    const int baseLayerCountX = 16; // specifying the number of particles in the bottom layer x-direction
-    const int totalLayers = 2; // Total number of layers to stack
+    const int baseLayerCountX = 60; // specifying the number of particles in the bottom layer x-direction
+    const int totalLayers = 15; // Total number of layers to stack
 
     std::vector<float3> positions;
     std::vector<std::shared_ptr<DEMClumpTemplate>> clump_types;
 
-    // Generate the custom lattice
+    // Generate the custom lattice with additional spacing to avoid incorrect contact force resolution
     for (int layer = 0; layer < totalLayers; ++layer) {
-    // Alternate between baseLayerCountX and baseLayerCountX - 1 based on whether the layer index is even or odd
-    int layerCountX = baseLayerCountX - (layer % 2); 
-    // Calculation for layerCountY remains the same
-    int layerCountY = static_cast<int>(std::round(0.1 * layerCountX)); 
-    for (int y = 0; y < layerCountY; ++y) {
-        for (int x = 0; x < layerCountX; ++x) {
-            // Calculation for xPos, yPos, and zPos remains the same
-            float xPos = x * particleDiameter;
-            float yPos = y * sqrt(3) * R; 
-            float zPos = layer * particleDiameter; 
+        // Alternate between baseLayerCountX and baseLayerCountX - 1 based on whether the layer index is even or odd
+        int layerCountX = baseLayerCountX - (layer % 2);
+        // Calculation for layerCountY remains the same
+        int layerCountY = static_cast<int>(std::round(0.1 * layerCountX));
 
-            positions.push_back(make_float3(xPos, yPos, zPos));
-            clump_types.push_back(sph_type_1);
+        // Calculate an offset for odd layers to create a densely packed structure
+        float layerOffset = 0.0f;
+        if (layer % 2 == 1) {
+            // Offset odd layers by half the particle diameter to create a hexagonal close packing
+            layerOffset = 0.5 * particleDiameter;
+        }
+
+        // Additional space of 10% of the particle diameter for separation
+        float additionalSpace = 0.1 * particleDiameter;
+
+        for (int y = 0; y < layerCountY; ++y) {
+            for (int x = 0; x < layerCountX; ++x) {
+                // Adjust xPos calculation by adding the layerOffset and consider the additional spacing
+                float xPos = (x * particleDiameter + layerOffset) + additionalSpace;
+                // Incorporate the additional spacing in yPos and zPos calculations
+                float yPos = (y * sqrt(3) * R) + additionalSpace;
+                // Adjust zPos for additional spacing between layers
+                float zPos = (layer * particleDiameter) + (layer > 0 ? additionalSpace : 0.0);
+
+                positions.push_back(make_float3(xPos, yPos, zPos));
+                clump_types.push_back(sph_type_1);
             }
         }
     }
 
-
     auto particles = DEMSim.AddClumps(clump_types, positions);
     
-    // Add bottom plane mesh
-    auto bot_plane = DEMSim.AddWavefrontMeshObject((GET_DATA_PATH() / "mesh/plane_20by20.obj").string(), mat_type_2);
-    bot_plane->SetInitPos(make_float3(0, 0, -1.25));
-    bot_plane->SetMass(10000.);
-
     DEMSim.SetInitTimeStep(2e-5);
     DEMSim.SetGravitationalAcceleration(make_float3(0, 0, -9.8));
     DEMSim.SetCDUpdateFreq(10);
