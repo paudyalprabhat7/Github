@@ -41,7 +41,7 @@ int main() {
     float step_size = 2e-7;
     double world_size = terrain_rad * 124.0;
     DEMSim.InstructBoxDomainDimension({-world_size / 2., world_size / 2.}, {-world_size / 2., world_size / 2.},
-                                      {0, 30.0*terrain_rad});
+                                      {0, 30.0*world_size});
     DEMSim.InstructBoxDomainBoundingBC("top_open", mat_type_terrain);
 
     // Generate terrain particles
@@ -50,15 +50,12 @@ int main() {
 
     HCPSampler sampler(2.01 * terrain_rad);
     float sample_halfwidth = world_size / 2 - 2 * terrain_rad;
-    float fullheight = world_size * 6.;
+    float fullheight = terrain_rad * 31.;
     auto sample_center = make_float3(0, 0, fullheight / 2 + 1 * terrain_rad);
     auto input_xyz = sampler.SampleBox(sample_center, make_float3(sample_halfwidth, 0.f, fullheight / 2.));
 
     // Uniform selection of templates for each particle
-    DEMSim.LoadSphereType(uniform_terrain_rad * uniform_terrain_rad * uniform_terrain_rad * 2.0e3 * 4 / 3 * PI,
-                                                      uniform_terrain_rad, mat_type_terrain);
-
-    std::vector<std::shared_ptr<DEMClumpTemplate>> template_to_use(input_xyz.size(), terrain_rad);
+    std::vector<std::shared_ptr<DEMClumpTemplate>> template_to_use(input_xyz.size(), template_terrain);
 
     //add clumps                                               
     DEMSim.AddClumps(template_to_use, input_xyz);
