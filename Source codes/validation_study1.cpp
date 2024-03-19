@@ -45,28 +45,22 @@ int main() {
     DEMSim.InstructBoxDomainBoundingBC("top_open", mat_type_terrain);
 
     // Generate terrain particles
-    std::vector<std::shared_ptr<DEMClumpTemplate>> templates_terrain;
-    for (int i = 0; i < 11; i++) {
-        templates_terrain.push_back(DEMSim.LoadSphereType(terrain_rad * terrain_rad * terrain_rad * 2.0e3 * 4 / 3 * PI,
-                                                          terrain_rad, mat_type_terrain));
-        terrain_rad += 0.0001 / 2.;
-    }
+    auto templates_terrain = DEMSim.LoadSphereType(terrain_rad * terrain_rad * terrain_rad * 2.0e3 * 4 / 3 * PI,
+                                                      terrain_rad, mat_type_terrain); 
 
-    PDSampler sampler(2.01 * terrain_rad);
+    HCPSampler sampler(2.01 * terrain_rad);
     float sample_halfwidth = world_size / 2 - 2 * terrain_rad;
     float fullheight = world_size * 6.;
     auto sample_center = make_float3(0, 0, fullheight / 2 + 1 * terrain_rad);
     auto input_xyz = sampler.SampleBox(sample_center, make_float3(sample_halfwidth, 0.f, fullheight / 2.));
 
-    // Random selection of templates for each particle
-    std::random_device rd;
-    std::mt19937 gen(rd());
-    std::uniform_int_distribution<> dist(0, templates_terrain.size() - 1);
+    // Uniform selection of templates for each particle
+    DEMSim.LoadSphereType(uniform_terrain_rad * uniform_terrain_rad * uniform_terrain_rad * 2.0e3 * 4 / 3 * PI,
+                                                      uniform_terrain_rad, mat_type_terrain);
 
-    std::vector<std::shared_ptr<DEMClumpTemplate>> template_to_use(input_xyz.size());
-    for (unsigned int i = 0; i < input_xyz.size(); i++) {
-        template_to_use[i] = templates_terrain[dist(gen)];
-    }
+    std::vector<std::shared_ptr<DEMClumpTemplate>> template_to_use(input_xyz.size(), terrain_rad);
+
+    //add clumps                                               
     DEMSim.AddClumps(template_to_use, input_xyz);
 
     DEMSim.SetInitTimeStep(step_size);
