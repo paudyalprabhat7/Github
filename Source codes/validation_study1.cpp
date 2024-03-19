@@ -55,7 +55,7 @@ int main() {
     auto input_xyz = sampler.SampleBox(sample_center, make_float3(sample_halfwidth, 0.f, fullheight / 2.));
 
     // Uniform selection of templates for each particle
-    std::vector<std::shared_ptr<DEMClumpTemplate>> template_to_use(input_xyz.size(), template_terrain);
+    std::vector<std::shared_ptr<DEMClumpTemplate>> template_to_use(input_xyz.size(), templates_terrain);
 
     //add clumps                                               
     DEMSim.AddClumps(template_to_use, input_xyz);
