@@ -21,26 +21,28 @@
 using namespace deme;
 using namespace std::filesystem;
 
-std::vector<float3> TriangularLattice(float terrain_rad, float world_size, int baseCount, int numLayers) {
+std::vector<float3> Generate2DTriangularLattice(float particleRadius, int layers) {
     std::vector<float3> positions;
-    float diameter = 2 * terrain_rad;
+    float diameter = 2.0f * particleRadius;
+    // Apply a 1% safety margin
+    float spacing = diameter * 1.01f;
+    float layerHeight = spacing * sqrt(3) / 2; // Vertical spacing for a triangular lattice
 
-    //1% safety margin before generation
-    float safetyMargin = 1.01;
-    float inLayerSpacing = diameter * safetyMargin;
-    float verticalSpacing = sqrt(3)/2 * diameter * safetyMargin;
-    float layerHeight = 0; 
-    bool evenLayer = true;
+    for (int layer = 0; layer < layers; ++layer) {
+        int particlesInLayer = layer % 2 == 0 ? 61 : 60;
+        // Determine the offset for this layer to stagger the particles
+        float offsetX = (layer % 2 == 0) ? 0 : spacing / 2;
 
-    for (int layer = 0; layer < numLayers; ++layer) {
-        int particlesInLayer = evenLayer ? baseCount : (baseCount - 1);
-        for (int i = 0; i <particlesInLayer; ++i) {
-            //calculating the x position
-            float xOffset = evenLayer ? (i - baseCount / 2.0f) * inLayerSpacing : ((i + 0.5) - baseCount / 2.0f) * inLayerSpacing;
-            positions.push_back(make_float3(xOffset, 0, layerHeight));
+        for (int particle = 0; particle < particlesInLayer; ++particle) {
+            // Calculate positions, keeping Y constant as it's a 2D lattice
+            float x = particle * spacing + offsetX;
+            float z = layer * layerHeight; // Stack layers vertically
+            float3 position;
+            position.x = x;
+            position.y = 0.0f;
+            position.z = z;
+            positions.push_back(position);
         }
-        layerHeight += verticalSpacing;
-        evenLayer = !evenLayer;
     }
 
     return positions;
@@ -55,13 +57,14 @@ int main() {
     DEMSim.SetErrorOutVelocity(20000.);
 
     path out_dir = current_path();
-    out_dir += "/DemoOutput_ParticleSettle";
+    out_dir += "/DemoOutput_ParticleSettle_customlattice";
     create_directory(out_dir);
 
     // Material properties for the terrain
     auto mat_type_terrain = DEMSim.LoadMaterial({{"E", 7e7}, {"nu", 0.24}, {"CoR", 0.9}, {"mu", 0.3}, {"Crr", 0.0}});
 
-    double terrain_rad = 0.006 / 2.;
+    float terrain_rad = 0.006 / 2.;
+    int layers = 15;
 
     float step_size = 2e-7;
     double world_size = terrain_rad * 124.0;
@@ -73,10 +76,15 @@ int main() {
     auto template_terrain = DEMSim.LoadSphereType(terrain_rad * terrain_rad * terrain_rad * 2.0e3 * 4 / 3 * PI,
                                                       terrain_rad, mat_type_terrain); 
 
-    auto latticePositions = TriangularLattice(terrain_rad, world_size, 61, 15)
+    auto latticePositions = Generate2DTriangularLattice(terrain_rad, layers);
    
     //add clumps                                               
     DEMSim.AddClumps(template_terrain, latticePositions);
+
+    //printing positions for verification
+    for (const auto& pos : latticePositions) {
+        std::cout << "Particle Position: X = " << pos.x << ", Y = " << pos.y << ", Z = " << pos.z << std::endl;
+    }
 
     DEMSim.SetInitTimeStep(step_size);
     DEMSim.SetMaxVelocity(30.);
@@ -98,7 +106,7 @@ int main() {
         DEMSim.DoDynamicsThenSync(frame_time);
     }
 
-    std::cout << "Total num of particles: " << input_xyz.size() << std::endl;
+    std::cout << "Total num of particles: " << latticePositions.size() << std::endl;
     std::cout << "Particle settling simulation completed." << std::endl;
     return 0;
 }
