@@ -24,8 +24,8 @@ using namespace std::filesystem;
 std::vector<float3> Generate2DTriangularLattice(float particleRadius, int layers) {
     std::vector<float3> positions;
     float diameter = 2.0f * particleRadius;
-    // Apply a 1% safety margin
-    float spacing = diameter * 1.01f;
+    // Apply a 10% safety margin
+    float spacing = diameter * 1.1f;
     float layerHeight = spacing * sqrt(3) / 2; // Vertical spacing for a triangular lattice
 
     for (int layer = 0; layer < layers; ++layer) {
@@ -67,7 +67,7 @@ int main() {
     int layers = 15;
 
     float step_size = 2e-7;
-    double world_size = terrain_rad * 124.0;
+    double world_size = terrain_rad * 275;
     DEMSim.InstructBoxDomainDimension({-world_size / 2., world_size / 2.}, {-world_size / 2., world_size / 2.},
                                       {0, 30.0*world_size});
     DEMSim.InstructBoxDomainBoundingBC("top_open", mat_type_terrain);

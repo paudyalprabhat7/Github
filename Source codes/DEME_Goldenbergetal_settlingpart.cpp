@@ -44,7 +44,6 @@ std::vector<float3> Generate2DTriangularLattice(float particleRadius, int layers
             positions.push_back(position);
         }
     }
-
     return positions;
 }
 
