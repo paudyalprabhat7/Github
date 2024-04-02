@@ -57,7 +57,7 @@ int main() {
     DEMSim.SetErrorOutVelocity(20000.);
 
     path out_dir = current_path();
-    out_dir += "/DemoOutput_ParticleSettle_customlattice";
+    out_dir += "/DemoOutput_ParticleSettle_widerdomain";
     create_directory(out_dir);
 
     // Material properties for the terrain
@@ -67,9 +67,17 @@ int main() {
     int layers = 15;
 
     float step_size = 2e-7;
-    double world_size = terrain_rad * 275;
+
+    float num_part_per_stack = 61.0;
+    float spacing = (2.0f * terrain_rad * 1.1f);
+
+    float lattice_width = 2.0 * terrain_rad * (num_part_per_stack + 1.0) + (num_part_per_stack - 1.0) * spacing;
+    float lattice_height = 2.0 * terrain_rad * (layers + 1.0) + (layers - 1.0) * spacing;
+
+
+    double world_size = lattice_width;
     DEMSim.InstructBoxDomainDimension({-world_size / 2., world_size / 2.}, {-world_size / 2., world_size / 2.},
-                                      {0, 30.0*world_size});
+                                      {-lattice_height/2, 300});
     DEMSim.InstructBoxDomainBoundingBC("top_open", mat_type_terrain);
 
     // Generate terrain particles
