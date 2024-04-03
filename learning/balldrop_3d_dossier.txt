@@ -68,3 +68,10 @@ double randomBetween0and1() {
 
     return distribution(gen);
 }
+
+the simple definition format here is: 
+return_type function name(constituent variables){
+		body.....
+		return xyz;
+	}
+	
