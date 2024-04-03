@@ -99,7 +99,7 @@ int main() {
     DEMSim.SetGravitationalAcceleration(make_float3(0, 0, -9.81));
     DEMSim.Initialize();
 
-    float settle_time = 1.0;
+    float settle_time = 5;
     unsigned int fps = 20;
     float frame_time = 1.0 / fps;
     unsigned int out_steps = static_cast<unsigned int>(1.0 / (fps * step_size));
