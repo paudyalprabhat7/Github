@@ -49,3 +49,22 @@ The three headers that I touched upon before are crucial to build and run the so
 #include <random>
 This is included in this code to generate random numbers. I could go deeper into this header but it is not worth it.  
 
+The concept of namespace in C++
+Namespace is a way to encapsulate a set of names (like variables, functions, and classes) so that they can be distinguished from similar names in other namespaces. It's a method to organize the sourcecode into logical groups. 
+It is essentially a group of names that is analogous to a python module. It can be defined inside a header file and that allows us to use the namespace name directly without defining the underlying functions or variables over and over again. 
+For instance, if there is a namespace x which has a function y defined inside a header file namez.h, you can include that header file in your code and call y without defining it. 
+
+back to the code,
+using namespace deme;
+-this namespace is defined in the DEM/API.h header file and allows you to call DEME specific functions without explicitly defining them over and over again)
+
+using namespace std::filesystem;
+-this namespace is defined within the filesystem header file. This namespace is called into action further below where a directory is created to store the output files. 
+
+Random number generation logic (not absolutely essential for my work but worth examining to understand function definition syntax)
+double randomBetween0and1() {
+    static std::mt19937 gen(std::random_device{}());                       // Random number generator
+    static std::uniform_real_distribution<double> distribution(0.0, 1.0);  // Uniform distribution between 0 and 1
+
+    return distribution(gen);
+}
