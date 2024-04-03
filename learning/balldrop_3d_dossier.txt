@@ -1,0 +1,51 @@
+Header files
+
+#include <core/ApiVersion.h>
+This is not native to C++ but is a part of the Chrono::DEME platform. It is related to the concept of Semantic Versioning (SemVers) where softwware versions are numbered so we can understand what changes are included.
+SemVers basic concept:
+The changes to programs follow the following format:
+1. Major: Big changes that could break things (could mess with the dependencies).
+2. Minor: New features that generally do not break dependencies.  
+3. Patch: Small/minor fixes like bug fixes
+Where does the ApiVersion.h header file come in?
+It defines the versioning information of DEME before initialization of the code. It is not necessary to go deeper than this for this header file. It's basically a bridge between the build configuration and the source code. 
+
+#include <core/utils/ThreadManager.h>
+This is also a DEME header file. It does the behind the scenes scheduling of tasks and allocation of threads for each time step. This ensures that the kinematic (contact detection) thread and the dynamic (force calculation or time integration) thread work in tandem.
+It is also not necessary to go deeper than this because it has little relevance in terms of application of the software.
+
+#include <DEM/API.h>
+Analogous to importing a library in Python. By "including" this file, I am essentially copying and pasting the contents of this file to my source code before compilation. This differs from Python, where a module or library is compiled separately and imported as an object. My goal here is to not become a software engineer so the analogy, while imperfect, will do for me. 
+
+#include <DEM/HostSideHelpers.hpp>
+This header file, in the crudest understanding possible, helps to facilitate smooth interaction between the source code and the host environment. Host environment here is defined as the compute node where I use cmake to build the code, and also the node(s) that I use to run the code. 
+
+#include <DEM/utils/Samplers.hpp>
+This is very important to understand. It includes the sampling algorithms used to generate particle positions before the "kinematic" thread detects contact. You can write your own algorithms, but the disadvantage is that you would have to think of all the edge cases and potential issues with premature contact detection. Will go into much more details. 
+
+The list of samplers used in DEME are:
+1. Poisson's Disk (PD) sampler.
+2. Hexagonally Closed Packed (HCP) sampler.
+3. Grid Sampler
+
+In addition to these, there are specialized wrappers which are essentially the modifications of the aforementioned samplers. They are:
+1. Box Grid Sampler: Grid sampler but for a defined box domain.
+2. Box HCP Sampler: Generates an HCP arrangement within a box volume
+3. CylSurf Sampler: Generates points that form a cylindrical surface shell. Specialized to create a layer of points around the surface of a cylinder. 
+
+Now we go to the header files that are native to C++. You need to understand at the most basic level at least what they do and why are they required before going into the main function. They are:
+#include <cstdio>
+The purpose of this header file is to provide C-style input and output facilities. It is the part of the C standard library support in C++, and includes functions such as 'printf', 'scanf', 'fopen', 'fclose' etc. It is "language agnostic" as it is compatible with both C and C++.
+An alternative to this is the iostream library. cstdio is likely used here to ensure legacy code compatibility.
+
+#include <chrono>
+This header defines time utilities in the C++ standard library. It provides a set of time duration, clock, and time point types for expressing system and steady clock times, performing time arithmetic, and converting between time units. Very important because we use "clock time" and "real world time" in DEM simulations (will get into it later).
+
+#include <filesystem>
+This name is very self explanatory. It is responsible for file and directory handling (creating, copying, moving, deleting, modifying, etc).
+
+The three headers that I touched upon before are crucial to build and run the source code. Apart from them, we can import (or "include", to be more true to the language), project-specific header files. 
+
+#include <random>
+This is included in this code to generate random numbers. I could go deeper into this header but it is not worth it.  
+
