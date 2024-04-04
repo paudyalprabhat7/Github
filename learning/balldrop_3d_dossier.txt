@@ -83,5 +83,50 @@ static std::mt19937 gen(std::random_device{}());
 Here, static is a storage class specifier for the variable 'gen'. It ensures that the variable is initialized only once and lasts for the lifetime of the program. In essence, the lifetime of the variable is global but it is local to the function. 
 std:mt19937 is one of the pseudorandom number generator class defined in the '<random>' header of the C++ standard library. 
 std::random{}() device is a random number generator that generates "true random" numbers leveraging any hardware source of randomness. In this instance, it is used to generate the seed for the pseudorandom number generator. This ensures unpredictability in generating the random number even by a determinisitic way.
+Not very relevant but still interesting.
+
+MAIN FUNCTION
+float ball_densities[] = {2.2e3, 3.8e3, 7.8e3, 15e3};
+a list of values that are the densities of the dropping ball are initialized. A list in C++ is initialized as:
+variable_type name[] = {list content};
+
+float Hs[] = {0.05, 0.1, 0.2};
+a list of heights from which the ball would be dropped is initialized
+
+double R = 0.0254 / 2.;
+Maybe particle diameter??
+
+int run_num = 0;
+integer variable that stores the number of unique runs (unique combinations of drop heights and densities)
+
+for (float ball_density : ball_densities) {
+        for (float H : Hs) {
+            double terrain_rad = 0.0025 / 2.;
+a nested for loop is initialized where the float variable ball_density is iterated through the list of densities in the parent loop and the float variable H is iterated through the list of drop heights in the child loop.
+
+			DEMSolver DEMSim;
+            // Output less info at initialization
+            DEMSim.SetVerbosity("ERROR");
+            DEMSim.SetOutputFormat("CSV");
+            DEMSim.SetOutputContent({"ABSV"});
+            DEMSim.SetMeshOutputFormat("VTK");
+
+Step by step explanation of the above snippet:
+1. Declare and initialize the object 'DEMSim' of the 'DEMSolver' class, allocating it on the stack and setting it up with its default constructor for use in the simulation.
+2. Set the verbosity level of the output to "ERROR". It can alternate between "ERROR" or "INFO" amongst other options that I have to look into. 
+3. Set the output format of the particle positions, relative velocities, and sizes as a csv file.
+4. Set the absolute velocity (absv) of the particles as one of the contents in the aforementioned csv file.
+5. Set the output format of the mesh (the ball or balls in this case) into a vtk file. 
+
+	path out_dir = current_path();
+	out_dir += "/DemoOutput_BallDrop";
+	create_directory(out_dir);
+
+Here the namespace std::filesystem is in action. If that namespace were not invoked in the beginning, this block would look like:
+std::filesystem::path out_dir = std::filesystem::current_path();
+out_dir += "/DemoOutput_BallDrop";
+std::filesystem::create_directory(out_dir);
+We are just creating a folder called "DemoOutput_BallDrop" in the build directory (which is also the current path) to store the output.
+
 
   
