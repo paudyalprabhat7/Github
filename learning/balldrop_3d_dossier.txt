@@ -74,4 +74,14 @@ return_type function name(constituent variables){
 		body.....
 		return xyz;
 	}
-	
+
+Here is the logic behind the random number generation:
+
+static std::mt19937 gen(std::random_device{}());
+
+
+Here, static is a storage class specifier for the variable 'gen'. It ensures that the variable is initialized only once and lasts for the lifetime of the program. In essence, the lifetime of the variable is global but it is local to the function. 
+std:mt19937 is one of the pseudorandom number generator class defined in the '<random>' header of the C++ standard library. 
+std::random{}() device is a random number generator that generates "true random" numbers leveraging any hardware source of randomness. In this instance, it is used to generate the seed for the pseudorandom number generator. This ensures unpredictability in generating the random number even by a determinisitic way.
+
+  
