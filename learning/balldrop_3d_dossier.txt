@@ -128,5 +128,68 @@ out_dir += "/DemoOutput_BallDrop";
 std::filesystem::create_directory(out_dir);
 We are just creating a folder called "DemoOutput_BallDrop" in the build directory (which is also the current path) to store the output.
 
-
+	/ E, nu, CoR, mu, Crr...
+	auto mat_type_ball =
+		DEMSim.LoadMaterial({{"E", 7e7}, {"nu", 0.24}, {"CoR", 0.9}, {"mu", 0.3}, {"Crr", 0.0}});
+	auto mat_type_terrain =
+		DEMSim.LoadMaterial({{"E", 7e7}, {"nu", 0.24}, {"CoR", 0.9}, {"mu", 0.3}, {"Crr", 0.0}});
+	auto mat_type_terrain_sim =
+		DEMSim.LoadMaterial({{"E", 7e7}, {"nu", 0.24}, {"CoR", 0.9}, {"mu", 0.3}, {"Crr", 0.0}});
   
+This is where material types are defined. The auto keyword is used here to avoid explicitly defining the variable type. The inputs are:
+a. "E" or the Young's modulus of elasticity.
+b. "nu" or the Poisson's ratio.
+c. "CoR" or the coefficient of restitution.
+d. "mu" or the sliding friction coefficient.
+e. "Crr" or the rolling friction coefficient. 
+
+	float step_size = 2e-6;
+	double world_size = 0.2;
+	
+The step size and world size are defined here. The term "world size" is a bit deceptive here because it's not the true "domain size" but simply the x and y extents of the simulation domain.
+
+	DEMSim.InstructBoxDomainDimension({-world_size / 2., world_size / 2.}, {-world_size / 2., world_size / 2.},
+                                              {0, 10 * world_size});
+    DEMSim.InstructBoxDomainBoundingBC("top_open", mat_type_terrain);
+
+The actual box domain is defined here. The x extent of the domain is 0.2 units long and varies from -0.1 to +0.1, as is the y extent. The z extent varies from 0 to 10. 
+The "top open" boundary is applied here, resembling a box domain with no restrictions in the z-direction. I would have to look into other boundary types. 
+
+	auto projectile =
+	DEMSim.AddWavefrontMeshObject((GET_DATA_PATH() / "mesh/sphere.obj").string(), mat_type_ball);
+	projectile->Scale(R);
+	std::cout << "Total num of triangles: " << projectile->GetNumTriangles() << std::endl;
+	
+Here a variable "projectile" is defined and the AddWavefrontMeshObject method from the DEMSim class (defined within the DEM/API.h header file) is used to load a spherical ball stored within the build directory. 
+The basic syntax of doing so is:
+	variable_type/keyword variable_name = class.method(parameters);
+	Specifically,
+	keyword variable_name = class.method(path, material_type) 
+	
+The projectile (or ball) is then scaled to the ball radius (R) identified before initializattion of the nested for loop (that is calculated as the half of a specific diameter for some reason).
+It is a pointer that points to a class which has the attributes of the balls.
+
+standard c++ output format:
+std::cout << "String" << variable << "string" << std::endl;
+
+	projectile->SetInitPos(make_float3(0, 0, 8 * world_size));
+	float ball_mass = ball_density * 4. / 3. * PI * R * R * R;
+	projectile->SetMass(ball_mass);
+	projectile->SetMOI(
+		make_float3(ball_mass * 2 / 5 * R * R, ball_mass * 2 / 5 * R * R, ball_mass * 2 / 5 * R * R));
+	projectile->SetFamily(2);
+	DEMSim.SetFamilyFixed(2);
+	DEMSim.DisableContactBetweenFamilies(0, 2);
+	// Track the projectile
+	auto proj_tracker = DEMSim.Track(projectile);
+	
+Step by step of what the above snippet is doing:
+1. The initial position of the projectile, presumably of its centroid, is set using the SetInitPos() method.
+2. ball mass is calculated by multiplying the density with the volume, which is calculated from the radius of the balls using a simple formula. 
+3. The syntax here is: pointer->Function(attribute);. The ball mass is assigned.
+4. the moment of inertia is calculated based on the formula for mass moment of inertia of a sphere (need to look into this).
+5. A family number 2 is assigned to the ball.
+6. The family is fixed. This means that anything that is assigned this family would be fixed in space until explicitly specified. 
+7. By default, the terrain is assigned a family of 0. The contact between family 0 and 2 is disabled here to avoid premature contact detection between particles and 
+8. The projectile is tracked. In other words, the tracker defined here records the position of the projectile at 
+
