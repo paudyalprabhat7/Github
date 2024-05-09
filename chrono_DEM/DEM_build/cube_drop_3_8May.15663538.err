@@ -1,0 +1,7 @@
+
+WARNING! One GPU device is detected. Currently, DEME's performance edge is limited with only one GPU.
+Try allocating 2 GPU devices if possible.
+
+
+WARNING! Some clumps do not have their family numbers specified, so defaulted to 0
+

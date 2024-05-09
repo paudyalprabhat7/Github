@@ -1,0 +1,8 @@
+
+WARNING! Some clumps do not have their family numbers specified, so defaulted to 0
+
+
+WARNING! At least one clump is initialized with a position out of the box domian you specified.
+It is found at 0.396, 0, 0.080021 (this message only shows one such example).
+This simulation is unlikely to go as planned.
+

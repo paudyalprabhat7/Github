@@ -1,0 +1,11 @@
+
+WARNING! Some clumps do not have their family numbers specified, so defaulted to 0
+
+
+WARNING! At least one clump is initialized with a position out of the box domian you specified.
+It is found at 0.378, 0, 0.076383 (this message only shows one such example).
+This simulation is unlikely to go as planned.
+
+slurmstepd: error: *** JOB 14639043 ON g004 CANCELLED AT 2024-03-25T10:13:25 ***
+slurmstepd: error: container_p_join: setns failed for /mnt/job_tmp/14639043/.ns: Invalid argument
+slurmstepd: error: container_g_join(14639043): Invalid argument
