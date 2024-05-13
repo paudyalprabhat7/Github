@@ -13,7 +13,7 @@
 #include <DEM/HostSideHelpers.hpp>
 #include <DEM/utils/Samplers.hpp>
 
-#include <cstudio>
+#include <cstdio>
 #include <chrono>
 #include <filesystem>
 
@@ -88,5 +88,4 @@ int main() {
     DEMSim.ShowAnomalies();
     std::cout << "DEMdemo_BallDrop exiting..." << std::endl;
     return 0;
-
 }
