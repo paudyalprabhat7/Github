@@ -47,7 +47,7 @@ int main() {
 
     //terrain sampling
     float sample_halfheight = world_size/4;
-    float3 sample_center = (world_size/2, world_size/2, sample_halfheight);
+    float3 sample_center = make_float3(world_size/2, world_size/2, sample_halfheight);
     float sample_halfwidth = world_size/2;
     auto input_xyz = DEMBoxHCPSampler(sample_center, make_float3(sample_halfwidth, sample_halfwidth, sample_halfheight), 2.01*terrain_rad);
     DEMSim.AddClumps(template_terrain, input_xyz);
