@@ -11,7 +11,7 @@ Where does the ApiVersion.h header file come in?
 It defines the versioning information of DEME before initialization of the code. It is not necessary to go deeper than this for this header file. It's basically a bridge between the build configuration and the source code. 
 
 #include <core/utils/ThreadManager.h>
-This is also a DEME header file. It does the behind the scenes scheduling of tasks and allocation of threads for each time step. This ensures that the kinematic (contact detection) thread and the dynamic (force calculation or time integration) thread work in tandem.
+This is also not a DEME header file. It does the behind the scenes scheduling of tasks and allocation of threads for each time step. This ensures that the kinematic (contact detection) thread and the dynamic (force calculation or time integration) thread work in tandem.
 It is also not necessary to go deeper than this because it has little relevance in terms of application of the software.
 
 #include <DEM/API.h>
