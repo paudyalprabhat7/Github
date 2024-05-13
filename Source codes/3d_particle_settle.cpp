@@ -29,9 +29,9 @@ int main() {
     DEMSim.EnsureKernelErrMsgLineNum(); 
 
     //load the material properties
-    auto mat_type_cube = DEMSim.LoadMaterial({{"E", 2.1e5}, {"nu", 0.3}, {"CoR", 0.6}, {"mu", 0.3}, "Crr", 0.01});
-    auto mat_type_terrain = DEMSim.LoadMaterial({{"E", 1e5}, {"nu", 0.3}, {"CoR", 0.8}, {"mu", 0.65}, "Crr", 0.01});
-    auto mat_type_analyticalb = DEMSim.LoadMaterial({{"E", 2.1e5}, {"nu", 0.3}, {"CoR", 0.6}, {"mu", 0.3}, "Crr", 0.01});
+    auto mat_type_cube = DEMSim.LoadMaterial({{"E", 2.1e5}, {"nu", 0.3}, {"CoR", 0.6}, {"mu", 0.3}, {"Crr", 0.01}});
+    auto mat_type_terrain = DEMSim.LoadMaterial({{"E", 1e5}, {"nu", 0.3}, {"CoR", 0.8}, {"mu", 0.65}, {"Crr", 0.01}});
+    auto mat_type_analyticalb = DEMSim.LoadMaterial({{"E", 2.1e5}, {"nu", 0.3}, {"CoR", 0.6}, {"mu", 0.3}, {"Crr", 0.01}});
 
     //step size
     float step_size = 1e-4;
@@ -75,7 +75,7 @@ int main() {
     //main loop for settling
     for (float t = 0; t<settle_time; t+=frame_time) {
         char filename[200];
-        sprintf(filename, "%s/settlingphase_output_%04d.csv", out_dir.c_str(), currframe);
+        sprintf(filename, "%s/settlingphase_output_%04d.csv", out_dir.c_str(), curr_frame);
         DEMSim.WriteSphereFile(std::string(filename));
         curr_frame++;
 
