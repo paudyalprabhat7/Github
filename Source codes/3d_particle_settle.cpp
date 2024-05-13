@@ -54,7 +54,7 @@ int main() {
 
     //initialization of simulation
     DEMSim.SetInitTimeStep(step_size);
-    DEMSim.SetGravitationalAcceleration(0, 0 , -9.81);
+    DEMSim.SetGravitationalAcceleration(make_float3(0, 0 , -9.81));
     DEMSim.SetMaxVelocity(15.);
 
     DEMSim.Initialize();
