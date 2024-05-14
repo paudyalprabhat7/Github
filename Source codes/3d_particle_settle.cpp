@@ -36,7 +36,7 @@ int main() {
     DEMSim.SetVerbosity(INFO);
     DEMSim.SetOutputFormat(OUTPUT_FORMAT::CSV); 
     DEMSim.SetOutputContent(OUTPUT_CONTENT::ABSV);
-    //DEMSim.SetMeshOutputFormat(MESH_FORMAT::VTK);
+    DEMSim.SetMeshOutputFormat(MESH_FORMAT::VTK);
     DEMSim.EnsureKernelErrMsgLineNum(); 
 
     //load the material properties
@@ -69,7 +69,7 @@ int main() {
     auto projectile = DEMSim.AddWavefrontMeshObject((GET_DATA_PATH() / "mesh/cube.obj").string(), mat_type_cube);
     projectile->Scale(make_float3(cube_size, cube_size, cube_thickness));
 
-    projectile->SetInitPos(0.0, 0.0, 1.5 * world_size);
+    projectile->SetInitPos(make_float3(0.0, 0.0, 1.5 * world_size));
     float cube_density = 1.05e3;
     projectile->SetMass(cube_density);
     projectile->SetMOI(make_float3(cube_density * 1 / 6, cube_density * 1 / 6, cube_density * 1 / 6));
@@ -116,10 +116,11 @@ int main() {
 
     //main loop for settling
     for (float t = 0; t<settle_time; t+=frame_time) {
-        char filename[200], force_filename[200];
+        char filename[200], force_filename[200], meshfilename[200];
         sprintf(filename, "%s/settlingphase_output_%04d.csv", out_dir.c_str(), curr_frame);
         sprintf(force_filename, "%s/DEMdemo_forces_%04d.csv", out_dir.c_str(), curr_frame);
         DEMSim.WriteSphereFile(std::string(filename));
+        DEMSim.WriteMeshFile(std::string(meshfilename));
         writeFloat3VectorsToCSV(force_csv_header, {points, forces}, force_filename, num_force_pairs);
         curr_frame++;
         num_force_pairs = bottom_tracker -> GetContactForces(points, forces);
