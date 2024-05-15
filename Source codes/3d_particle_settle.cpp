@@ -134,9 +134,9 @@ int main() {
     }
 
     //dropping the cube
-    DEMSim.CHangeFamily(2,1);
+    DEMSim.ChangeFamily(2,1);
 
-    std::chrono::high_resolution_clock::time_point_start = std::chrono::high_resolution_clock::now();
+    std::chrono::high_resolution_clock::time_point start = std::chrono::high_resolution_clock::now();
     for (float t = 0; t < sim_time; t+=frame_time) {
         char filename[200], force_filename[200], meshfilename[200];
         sprintf(filename, "%s/droppingphase_output_%04d.csv", out_dir.c_str(), curr_frame);
@@ -145,7 +145,7 @@ int main() {
         DEMSim.WriteSphereFile(std::string(filename));
         DEMSim.WriteMeshFile(std::string(meshfilename));
         writeFloat3VectorsToCSV(force_csv_header, {points, forces}, force_filename, num_force_pairs);
-        cur_frame++;
+        curr_frame++;
         num_force_pairs = bottom_tracker -> GetContactForces(points, forces);
         DEMSim.DoDynamicsThenSync(frame_time);
         DEMSim.ShowThreadCollaborationStats();
