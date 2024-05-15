@@ -121,8 +121,8 @@ int main() {
     //loop for settling
     for (float t = 0; t<settle_time; t+=frame_time) {
         char filename[200], force_filename[200], meshfilename[200];
-        sprintf(filename, "%s/settlingphase_output_%04d.csv", out_dir.c_str(), curr_frame);
-        sprintf(meshfilename, "%s/settlingphase_output_%04d.vtk", out_dir.c_str(), curr_frame);
+        sprintf(filename, "%s/simulation_output_%04d.csv", out_dir.c_str(), curr_frame);
+        sprintf(meshfilename, "%s/simulation_output_%04d.vtk", out_dir.c_str(), curr_frame);
         sprintf(force_filename, "%s/DEMdemo_forces_%04d.csv", out_dir.c_str(), curr_frame);
         DEMSim.WriteSphereFile(std::string(filename));
         DEMSim.WriteMeshFile(std::string(meshfilename));
@@ -139,8 +139,8 @@ int main() {
     std::chrono::high_resolution_clock::time_point start = std::chrono::high_resolution_clock::now();
     for (float t = 0; t < sim_time; t+=frame_time) {
         char filename[200], force_filename[200], meshfilename[200];
-        sprintf(filename, "%s/droppingphase_output_%04d.csv", out_dir.c_str(), curr_frame);
-        sprintf(meshfilename, "%s/droppingphase_output_%04d.vtk", out_dir.c_str(), curr_frame);
+        sprintf(filename, "%s/simulation_output_%04d.csv", out_dir.c_str(), curr_frame);
+        sprintf(meshfilename, "%s/simulation_output_%04d.vtk", out_dir.c_str(), curr_frame);
         sprintf(force_filename, "%s/DEMdemo_forces_%04d.csv", out_dir.c_str(), curr_frame);
         DEMSim.WriteSphereFile(std::string(filename));
         DEMSim.WriteMeshFile(std::string(meshfilename));
