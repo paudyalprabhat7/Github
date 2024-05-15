@@ -40,9 +40,10 @@ int main() {
     DEMSim.EnsureKernelErrMsgLineNum(); 
 
     //load the material properties
-    auto mat_type_cube = DEMSim.LoadMaterial({{"E", 2.1e5}, {"nu", 0.3}, {"CoR", 0.6}, {"mu", 0.3}, {"Crr", 0.01}});
-    auto mat_type_terrain = DEMSim.LoadMaterial({{"E", 1e5}, {"nu", 0.3}, {"CoR", 0.8}, {"mu", 0.65}, {"Crr", 0.01}});
-    auto mat_type_analyticalb = DEMSim.LoadMaterial({{"E", 2.1e5}, {"nu", 0.3}, {"CoR", 0.6}, {"mu", 0.3}, {"Crr", 0.01}});
+    auto mat_type_cube = DEMSim.LoadMaterial({{"E", 2.1e10}, {"nu", 0.3}, {"CoR", 0.6}, {"mu", 0.3}, {"Crr", 0.01}});
+    auto mat_type_terrain = DEMSim.LoadMaterial({{"E", 1e8}, {"nu", 0.3}, {"CoR", 0.8}, {"mu", 0.65}, {"Crr", 0.01}});
+    auto mat_type_analyticalb = DEMSim.LoadMaterial({{"E", 2.1e10}, {"nu", 0.3}, {"CoR", 0.6}, {"mu", 0.3}, {"Crr", 0.01}});
+    auto mat_type_flexibleb = DEMSim.LoadMaterial({{"E", 3e6}, {"nu", 0.3}, {"CoR", 0.6}, {"mu", 0.3}, {"Crr", 0.01}});
     DEMSim.SetMaterialPropertyPair("mu", mat_type_terrain, mat_type_analyticalb, 0.5);
 
     //step size
@@ -51,20 +52,23 @@ int main() {
 
     //Analytical boundary definition
     auto walls = DEMSim.AddExternalObject();
+    auto bottom_wall = DEMSim.AddExternalObject();
     // Define each plane of the box domain manually
-    walls->AddPlane(make_float3(0, 0, 0), make_float3(0, 0, 1), mat_type_analyticalb); // Bottom plane
+    bottom_wall->AddPlane(make_float3(0, 0, 0), make_float3(0, 0, 1), mat_type_analyticalb); // Bottom plane
     //walls->AddPlane(make_float3(0, 0, world_size), make_float3(0, 0, -1), mat_type_analyticalb); // Top plane
-    walls->AddPlane(make_float3(world_size / 2, 0, 0), make_float3(-1, 0, 0), mat_type_analyticalb); // Right plane
-    walls->AddPlane(make_float3(-world_size / 2, 0, 0), make_float3(1, 0, 0), mat_type_analyticalb); // Left plane
-    walls->AddPlane(make_float3(0, world_size / 2, 0), make_float3(0, -1, 0), mat_type_analyticalb); // Front plane
-    walls->AddPlane(make_float3(0, -world_size / 2, 0), make_float3(0, 1, 0), mat_type_analyticalb); // Back plane
+    walls->AddPlane(make_float3(world_size / 2, 0, 0), make_float3(-1, 0, 0), mat_type_flexibleb); // Right plane
+    walls->AddPlane(make_float3(-world_size / 2, 0, 0), make_float3(1, 0, 0), mat_type_flexibleb); // Left plane
+    walls->AddPlane(make_float3(0, world_size / 2, 0), make_float3(0, -1, 0), mat_type_flexibleb); // Front plane
+    walls->AddPlane(make_float3(0, -world_size / 2, 0), make_float3(0, 1, 0), mat_type_flexibleb); // Back plane
 
-    auto bottom_tracker = DEMSim.Track(walls);
+    auto bottom_tracker = DEMSim.Track(bottom_wall);
+
+    float fill_height = 0.995 * world_size;
 
     //addition of impact cube
     float cube_thickness = 0.05 * world_size;
     float cube_size = 0.5 * world_size;
-    float cube_pos = 1.5 * world_size;
+    float cube_pos = fill_height * 1.10;
     
     auto projectile = DEMSim.AddWavefrontMeshObject((GET_DATA_PATH() / "mesh/cube.obj").string(), mat_type_cube);
     projectile->Scale(make_float3(cube_size, cube_size, cube_thickness));
@@ -82,7 +86,6 @@ int main() {
 
     //terrain sampling
     HCPSampler sampler(terrain_rad * 2.2);
-    float fill_height = 0.5;
     float3 fill_center = make_float3(0, 0, fill_height/2 + 2 * terrain_rad);
     float3 fill_halfsize = make_float3(world_size/2, world_size/2, fill_height/2);
     auto input_xyz = sampler.SampleBox(fill_center, fill_halfsize);
@@ -104,6 +107,7 @@ int main() {
     create_directory(out_dir);
 
     //visualization frame time
+    float sim_time = 4.0;
     float settle_time = 2.0;
     unsigned int fps = 24;
     float frame_time = 1.0 / fps;
@@ -114,7 +118,7 @@ int main() {
     
     unsigned int curr_frame = 0;
 
-    //main loop for settling
+    //loop for settling
     for (float t = 0; t<settle_time; t+=frame_time) {
         char filename[200], force_filename[200], meshfilename[200];
         sprintf(filename, "%s/settlingphase_output_%04d.csv", out_dir.c_str(), curr_frame);
@@ -129,7 +133,30 @@ int main() {
         DEMSim.ShowThreadCollaborationStats();
     }
 
-    //post settling housekeeping
+    //dropping the cube
+    DEMSim.CHangeFamily(2,1);
+
+    std::chrono::high_resolution_clock::time_point_start = std::chrono::high_resolution_clock::now();
+    for (float t = 0; t < sim_time; t+=frame_time) {
+        char filename[200], force_filename[200], meshfilename[200];
+        sprintf(filename, "%s/droppingphase_output_%04d.csv", out_dir.c_str(), curr_frame);
+        sprintf(meshfilename, "%s/droppingphase_output_%04d.vtk", out_dir.c_str(), curr_frame);
+        sprintf(force_filename, "%s/DEMdemo_forces_%04d.csv", out_dir.c_str(), curr_frame);
+        DEMSim.WriteSphereFile(std::string(filename));
+        DEMSim.WriteMeshFile(std::string(meshfilename));
+        writeFloat3VectorsToCSV(force_csv_header, {points, forces}, force_filename, num_force_pairs);
+        cur_frame++;
+        num_force_pairs = bottom_tracker -> GetContactForces(points, forces);
+        DEMSim.DoDynamicsThenSync(frame_time);
+        DEMSim.ShowThreadCollaborationStats();
+
+    }
+
+    std::chrono::high_resolution_clock::time_point end = std::chrono::high_resolution_clock::now();
+    std::chrono::duration<double> time_sec = std::chrono::duration_cast<std::chrono::duration<double>>(end - start);
+    std::cout << time_sec.count() << " seconds (wall time) to finish the simulation" << std::endl;
+
+    //post simulation housekeeping
     DEMSim.ShowTimingStats();
     DEMSim.ShowAnomalies();
     std::cout << "Simulation exiting" << std::endl;
