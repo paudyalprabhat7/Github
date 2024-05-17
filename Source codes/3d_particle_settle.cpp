@@ -74,9 +74,10 @@ int main() {
     projectile->Scale(make_float3(cube_size, cube_size, cube_thickness));
 
     projectile->SetInitPos(make_float3(0.0, 0.0, 1.5 * world_size));
-    float cube_density = 1.05e3;
-    projectile->SetMass(cube_density);
-    projectile->SetMOI(make_float3(cube_density * 1 / 6, cube_density * 1 / 6, cube_density * 1 / 6));
+    float cube_density = 7.6e3;
+    float cube_mass = cube_density * (cube_thickness * cube_thickness * cube_size);
+    projectile->SetMass(cube_mass);
+    projectile->SetMOI(make_float3(cube_mass * 1 / 6, cube_mass * 1 / 6, cube_mass * 1 / 6));
     projectile->SetFamily(2);
     DEMSim.SetFamilyFixed(2);
 
