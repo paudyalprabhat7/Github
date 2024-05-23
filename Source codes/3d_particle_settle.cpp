@@ -40,40 +40,42 @@ int main() {
     DEMSim.EnsureKernelErrMsgLineNum(); 
 
     //load the material properties
-    auto mat_type_cube = DEMSim.LoadMaterial({{"E", 2.1e10}, {"nu", 0.3}, {"CoR", 0.6}, {"mu", 0.3}, {"Crr", 0.01}});
-    auto mat_type_terrain = DEMSim.LoadMaterial({{"E", 1e8}, {"nu", 0.3}, {"CoR", 0.8}, {"mu", 0.65}, {"Crr", 0.01}});
-    auto mat_type_analyticalb = DEMSim.LoadMaterial({{"E", 2.1e10}, {"nu", 0.3}, {"CoR", 0.6}, {"mu", 0.3}, {"Crr", 0.01}});
-    auto mat_type_flexibleb = DEMSim.LoadMaterial({{"E", 3e6}, {"nu", 0.3}, {"CoR", 0.6}, {"mu", 0.3}, {"Crr", 0.01}});
+    auto mat_type_cube = DEMSim.LoadMaterial({{"E", 2.1e11}, {"nu", 0.3}, {"CoR", 0.6}, {"mu", 0.3}, {"Crr", 0.01}});
+    auto mat_type_terrain = DEMSim.LoadMaterial({{"E", 1e11}, {"nu", 0.3}, {"CoR", 0.8}, {"mu", 0.65}, {"Crr", 0.01}});
+    auto mat_type_analyticalb = DEMSim.LoadMaterial({{"E", 5e7}, {"nu", 0.5}, {"CoR", 0.6}, {"mu", 0.3}, {"Crr", 0.01}});
+    //auto mat_type_flexibleb = DEMSim.LoadMaterial({{"E", 3e6}, {"nu", 0.3}, {"CoR", 0.6}, {"mu", 0.3}, {"Crr", 0.01}});
     DEMSim.SetMaterialPropertyPair("mu", mat_type_terrain, mat_type_analyticalb, 0.5);
 
     //step size
-    float step_size = 1e-4;
-    float world_size = 2;
+    float terrain_rad = 0.01;
+    float step_size = 1e-5;
+    float world_size = 25 * terrain_rad;
 
     //Analytical boundary definition
     auto walls = DEMSim.AddExternalObject();
     auto bottom_wall = DEMSim.AddExternalObject();
     // Define each plane of the box domain manually
-    bottom_wall->AddPlane(make_float3(0, 0, 0), make_float3(0, 0, 1), mat_type_analyticalb); // Bottom plane
+    bottom_wall->AddPlane(make_float3(0, 0, 0), make_float3(0, 0, 1), mat_type_terrain); // Bottom plane
     //walls->AddPlane(make_float3(0, 0, world_size), make_float3(0, 0, -1), mat_type_analyticalb); // Top plane
-    walls->AddPlane(make_float3(world_size / 2, 0, 0), make_float3(-1, 0, 0), mat_type_flexibleb); // Right plane
-    walls->AddPlane(make_float3(-world_size / 2, 0, 0), make_float3(1, 0, 0), mat_type_flexibleb); // Left plane
-    walls->AddPlane(make_float3(0, world_size / 2, 0), make_float3(0, -1, 0), mat_type_flexibleb); // Front plane
-    walls->AddPlane(make_float3(0, -world_size / 2, 0), make_float3(0, 1, 0), mat_type_flexibleb); // Back plane
+    walls->AddPlane(make_float3(world_size / 2, 0, 0), make_float3(-1, 0, 0), mat_type_terrain); // Right plane
+    walls->AddPlane(make_float3(-world_size / 2, 0, 0), make_float3(1, 0, 0), mat_type_terrain); // Left plane
+    walls->AddPlane(make_float3(0, world_size / 2, 0), make_float3(0, -1, 0), mat_type_terrain); // Front plane
+    walls->AddPlane(make_float3(0, -world_size / 2, 0), make_float3(0, 1, 0), mat_type_terrain); // Back plane
 
     auto bottom_tracker = DEMSim.Track(bottom_wall);
 
     float fill_height = 0.995 * world_size;
+    
 
     //addition of impact cube
     float cube_thickness = 0.05 * world_size;
     float cube_size = 0.5 * world_size;
-    float cube_pos = fill_height * 1.10;
+    float cube_pos = world_size + terrain_rad * 10;
     
     auto projectile = DEMSim.AddWavefrontMeshObject((GET_DATA_PATH() / "mesh/cube.obj").string(), mat_type_cube);
     projectile->Scale(make_float3(cube_size, cube_size, cube_thickness));
 
-    projectile->SetInitPos(make_float3(0.0, 0.0, 1.5 * world_size));
+    projectile->SetInitPos(make_float3(0.0, 0.0, cube_pos));
     float cube_density = 7.6e3;
     float cube_mass = cube_density * (cube_thickness * cube_thickness * cube_size);
     projectile->SetMass(cube_mass);
@@ -82,7 +84,7 @@ int main() {
     DEMSim.SetFamilyFixed(2);
 
     //terrain definition
-    float terrain_rad = 0.08;
+    
     auto template_terrain = DEMSim.LoadSphereType(terrain_rad * terrain_rad * terrain_rad * 2.69e3 * 4/3 * 3.141, terrain_rad, mat_type_terrain);
 
     //terrain sampling
@@ -104,7 +106,7 @@ int main() {
 
     //creating the output directory
     path out_dir = current_path();
-    out_dir += "/Output_settlingphase";
+    out_dir += "/Output_rubber_10x";
     create_directory(out_dir);
 
     //visualization frame time

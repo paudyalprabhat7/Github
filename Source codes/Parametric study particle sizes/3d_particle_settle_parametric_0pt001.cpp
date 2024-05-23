@@ -38,14 +38,13 @@ void runSimulation(float E_bottom, float E_side, float drop_height, const path& 
         // Load the material properties with updated elastic moduli
         auto mat_type_cube = DEMSim.LoadMaterial({{"E", 2.1e10}, {"nu", 0.3}, {"CoR", 0.6}, {"mu", 0.3}, {"Crr", 0.01}});
         auto mat_type_terrain = DEMSim.LoadMaterial({{"E", 1e8}, {"nu", 0.3}, {"CoR", 0.8}, {"mu", 0.65}, {"Crr", 0.01}});
-        auto mat_type_analyticalb = DEMSim.LoadMaterial({{"E", E_bottom}, {"nu", 0.3}, {"CoR", 0.6}, {"mu", 0.65}, {"Crr", 0.01}});
-        auto mat_type_flexibleb = DEMSim.LoadMaterial({{"E", E_side}, {"nu", 0.3}, {"CoR", 0.6}, {"mu", 0.65}, {"Crr", 0.01}});
-        DEMSim.SetMaterialPropertyPair("mu", mat_type_terrain, mat_type_analyticalb, 0.67);
-        DEMSim.SetMaterialPropertyPair("mu", mat_type_terrain, mat_type_flexibleb, 0.67);
+        auto mat_type_analyticalb = DEMSim.LoadMaterial({{"E", E_bottom}, {"nu", 0.3}, {"CoR", 0.6}, {"mu", 0.3}, {"Crr", 0.01}});
+        auto mat_type_flexibleb = DEMSim.LoadMaterial({{"E", E_side}, {"nu", 0.3}, {"CoR", 0.6}, {"mu", 0.3}, {"Crr", 0.01}});
+        DEMSim.SetMaterialPropertyPair("mu", mat_type_terrain, mat_type_analyticalb, 0.5);
 
         // Step size
-        float step_size = 1e-5;
-        float world_size = 0.5;
+        float step_size = 1e-4;
+        float world_size = 2;
 
         // Analytical boundary definition
         auto walls = DEMSim.AddExternalObject();
@@ -68,7 +67,7 @@ void runSimulation(float E_bottom, float E_side, float drop_height, const path& 
         auto projectile = DEMSim.AddWavefrontMeshObject((GET_DATA_PATH() / "mesh/cube.obj").string(), mat_type_cube);
         projectile->Scale(make_float3(cube_size, cube_size, cube_thickness));
 
-        projectile->SetInitPos(make_float3(0.0, 0.0, world_size));
+        projectile->SetInitPos(make_float3(0.0, 0.0, drop_height));
         float cube_density = 7.6e3;
         float cube_mass = cube_density * (cube_size * cube_size * cube_thickness);
         projectile->SetMass(cube_mass);
@@ -77,7 +76,7 @@ void runSimulation(float E_bottom, float E_side, float drop_height, const path& 
         DEMSim.SetFamilyFixed(2);
 
         // Terrain definition
-        float terrain_rad = 0.01;
+        float terrain_rad = 0.001;
         auto template_terrain = DEMSim.LoadSphereType(terrain_rad * terrain_rad * terrain_rad * 2.69e3 * 4/3 * 3.141, terrain_rad, mat_type_terrain);
 
         // Terrain sampling
@@ -130,8 +129,6 @@ void runSimulation(float E_bottom, float E_side, float drop_height, const path& 
             DEMSim.ShowThreadCollaborationStats();
         }
 
-        
-        
         // Dropping the cube
         DEMSim.ChangeFamily(2, 1);
 
@@ -174,12 +171,12 @@ void runSimulation(float E_bottom, float E_side, float drop_height, const path& 
 
 int main() {
     // Define parameter values
-    float bottom_boundary_E[] = {1e8};  // Example values
-    float side_planes_E[] = {1e7};  // Example values
-    float drop_heights[] = {0.6};  // Example values
+    float bottom_boundary_E[] = {1e8, 2e8, 3e8, 4e8, 5e8};  // Example values
+    float side_planes_E[] = {1e7, 2e7, 3e7};  // Example values
+    float drop_heights[] = {2.1, 2.2, 2.3};  // Example values
 
     // Create the master directory for all simulation results
-    path master_dir = current_path() / "SimulationResults_changedfriction";
+    path master_dir = current_path() / "SimulationResults_trial_19May2024_0pt001units";
     create_directories(master_dir);
 
     // Iterate over parameters and run simulations

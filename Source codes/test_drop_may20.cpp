@@ -1,3 +1,8 @@
+//  Copyright (c) 2021, SBEL GPU Development Team
+//  Copyright (c) 2021, University of Wisconsin - Madison
+//
+//	SPDX-License-Identifier: BSD-3-Clause
+
 #include <core/ApiVersion.h>
 #include <core/utils/ThreadManager.h>
 #include <DEM/API.h>
@@ -37,11 +42,14 @@ void runSimulation(float E_bottom, float E_side, float drop_height, const path& 
 
         // Load the material properties with updated elastic moduli
         auto mat_type_cube = DEMSim.LoadMaterial({{"E", 2.1e10}, {"nu", 0.3}, {"CoR", 0.6}, {"mu", 0.3}, {"Crr", 0.01}});
-        auto mat_type_terrain = DEMSim.LoadMaterial({{"E", 1e8}, {"nu", 0.3}, {"CoR", 0.8}, {"mu", 0.65}, {"Crr", 0.01}});
-        auto mat_type_analyticalb = DEMSim.LoadMaterial({{"E", E_bottom}, {"nu", 0.3}, {"CoR", 0.6}, {"mu", 0.65}, {"Crr", 0.01}});
-        auto mat_type_flexibleb = DEMSim.LoadMaterial({{"E", E_side}, {"nu", 0.3}, {"CoR", 0.6}, {"mu", 0.65}, {"Crr", 0.01}});
+        auto mat_type_terrain = DEMSim.LoadMaterial({{"E", 1e7}, {"nu", 0.3}, {"CoR", 0.6}, {"mu", 0.65}, {"Crr", 0.01}});
+        auto mat_type_analyticalb = DEMSim.LoadMaterial({{"E", E_bottom}, {"nu", 0.3}, {"CoR", 0.6}, {"mu", 0.3}, {"Crr", 0.01}});
+        auto mat_type_flexibleb = DEMSim.LoadMaterial({{"E", E_side}, {"nu", 0.3}, {"CoR", 0.6}, {"mu", 0.3}, {"Crr", 0.01}});
         DEMSim.SetMaterialPropertyPair("mu", mat_type_terrain, mat_type_analyticalb, 0.67);
+        DEMSim.SetMaterialPropertyPair("CoR", mat_type_terrain, mat_type_analyticalb, 0.67);
         DEMSim.SetMaterialPropertyPair("mu", mat_type_terrain, mat_type_flexibleb, 0.67);
+        DEMSim.SetMaterialPropertyPair("CoR", mat_type_terrain, mat_type_flexibleb, 0.67);
+
 
         // Step size
         float step_size = 1e-5;
@@ -68,12 +76,13 @@ void runSimulation(float E_bottom, float E_side, float drop_height, const path& 
         auto projectile = DEMSim.AddWavefrontMeshObject((GET_DATA_PATH() / "mesh/cube.obj").string(), mat_type_cube);
         projectile->Scale(make_float3(cube_size, cube_size, cube_thickness));
 
-        projectile->SetInitPos(make_float3(0.0, 0.0, world_size));
+        float initial_drop_height = world_size * 2; // Initial high position to avoid overlap
+        projectile->SetInitPos(make_float3(0.0, 0.0, initial_drop_height));
         float cube_density = 7.6e3;
         float cube_mass = cube_density * (cube_size * cube_size * cube_thickness);
         projectile->SetMass(cube_mass);
         projectile->SetMOI(make_float3(cube_mass * 1 / 6, cube_mass * 1 / 6, cube_mass * 1 / 6));
-        projectile->SetFamily(2);
+        projectile->SetFamily(2); // Initial fixed family
         DEMSim.SetFamilyFixed(2);
 
         // Terrain definition
@@ -130,10 +139,23 @@ void runSimulation(float E_bottom, float E_side, float drop_height, const path& 
             DEMSim.ShowThreadCollaborationStats();
         }
 
+       // Gradually lower the object
+        float lowering_time = 1.0;  // Duration to lower the object
+        float lowering_steps = lowering_time / step_size;
+        float velocity = (initial_drop_height - drop_height) / lowering_time;
+       
+        // Change family to one that allows prescribed linear velocity
+        DEMSim.ChangeFamily(2, 3);
+        DEMSim.SetFamilyPrescribedLinVel(3, "0", "0", std::to_string(-velocity));
         
-        
+
+        for (unsigned int i = 0; i < lowering_steps; ++i) {
+            DEMSim.DoDynamicsThenSync(step_size);
+        }
+        DEMSim.SetFamilyPrescribedLinVel(3, "0", "0", "0"); // Stop moving the object
+
         // Dropping the cube
-        DEMSim.ChangeFamily(2, 1);
+        DEMSim.ChangeFamily(3, 1);
 
         std::chrono::high_resolution_clock::time_point start = std::chrono::high_resolution_clock::now();
         for (float t = 0; t < sim_time; t += frame_time) {
@@ -179,7 +201,7 @@ int main() {
     float drop_heights[] = {0.6};  // Example values
 
     // Create the master directory for all simulation results
-    path master_dir = current_path() / "SimulationResults_changedfriction";
+    path master_dir = current_path() / "SimulationResults_changedstiffness";
     create_directories(master_dir);
 
     // Iterate over parameters and run simulations
