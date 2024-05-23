@@ -177,10 +177,10 @@ void runSimulation(float E_bottom, float E_side, float drop_height, const path& 
         std::cout << time_sec.count() << " seconds (wall time) to finish the simulation" << std::endl;
 
         // Post simulation housekeeping
-        DEMSim.ShowTimingStats();
+        DEMSim.ShowTimingStation exiting" << std::endl;
+ats();
         DEMSim.ShowAnomalies();
-        std::cout << "Simulation exiting" << std::endl;
-
+        std::cout << "Simul
         // Explicitly clear vectors to free memory
         forces.clear();
         points.clear();
