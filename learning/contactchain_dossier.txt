@@ -1,0 +1,37 @@
+Algorithm for the Goldenberg validation code
+
+1. The coefficient of internal friction mu is set as 0.1
+2. The magnitude of the force is set as 5.0 times the mass of particle 0.
+3. Two terrain materials are defined. The difference between the two is that there is no coefficient of restitution in the latter material. This is to ensure no rebound occurs after the particle settlement.
+	The properties are:
+	E = 1 e7 
+	nu = 0.33
+	CoR = 0.3
+	mu = varying from 0.00, 0.10, 0.20
+	Crr	= 0
+	
+4. Particle radius is 0.01 units
+5. The time-step is calculated using equation (4) in Zhang et al (2024). 
+6. The world size of the simulation is laid out as:
+	x-axis = 122.0 * terrain_rad
+	y-axis = 5 * terrain_rad (nominal size to prevent any overlap)
+	z-axis = 27 * terrain_rad
+	
+7. The clump templates are created. The first clump template includes CoR while the second one does not.
+8. The sampling (positioning) of the file is done from an external csv file. I will go into detail about that process here:
+	auto data_xyz = DEMSim.ReadClumpXyzFromCsv("./data/clumps/ContactChain_initial.csv");
+    std::vector<float3> input_xyz;
+
+    std::vector<std::shared_ptr<DEMClumpTemplate>> input_pile_template_type;
+
+    std::cout << data_xyz.size() << " Data points are loaded from the external list." << std::endl;
+
+    for (unsigned int i = 0; i < data_xyz.size(); i++) {
+        char t_name[20];
+        sprintf(t_name, "%d", i);
+
+        auto this_type_xyz = data_xyz[std::string(t_name)];
+        input_xyz.insert(input_xyz.end(), this_type_xyz.begin(), this_type_xyz.end());
+
+        input_pile_template_type.push_back(templates_terrain[0]);
+    }
